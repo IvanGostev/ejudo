@@ -10,12 +10,13 @@
                 <div class="card mb-3 border-start border-4 border-success">
                     <div class="card-body">
                         <h5 class="card-title text-success fw-bold">
-                            <i class="bi bi-check-circle-fill me-2"></i> Регистрация 
+                            <i class="bi bi-check-circle-fill me-2"></i> Регистрация
                             <span class="badge bg-success ms-2" style="font-size: 0.7em;">Выполнено</span>
                         </h5>
                         <p class="card-text text-muted">
-                            <del>Для начала работы введите номер телефона. На указанный номер поступит СМС с кодом подтверждения.
-                            После ввода кода вы будете авторизованы в системе.</del>
+                            <del>Для начала работы введите номер телефона. На указанный номер поступит СМС с кодом
+                                подтверждения.
+                                После ввода кода вы будете авторизованы в системе.</del>
                         </p>
                     </div>
                 </div>
@@ -57,7 +58,9 @@
                         <h5 class="card-title text-primary fw-bold"><i class="bi bi-4-circle me-2"></i> Загрузка и создание
                             актов</h5>
                         <p class="card-text">
-                            <strong>Автоматическая загрузка:</strong> На <a href="{{ route('dashboard') }}" class="text-judo-orange text-decoration-none fw-bold">странице Загрузки актов</a> загрузите сканы или фотографии актов. Система
+                            <strong>Автоматическая загрузка:</strong> На <a href="{{ route('dashboard') }}"
+                                class="text-judo-orange text-decoration-none fw-bold">странице Загрузки актов</a> загрузите
+                            акты в формате .docx .doc .pdf. Система
                             распознает данные.
                             <br>
                             <strong>Ручное создание:</strong> Вы можете создать акт вручную.
@@ -82,7 +85,9 @@
                         <h5 class="card-title text-primary fw-bold"><i class="bi bi-5-circle me-2"></i> Создание Журнала
                             (ЖУДО)</h5>
                         <p class="card-text">
-                            Перейдите в раздел <a href="{{ route('journal.index') }}" class="text-judo-orange text-decoration-none fw-bold">Формирование ЖУДО</a>. Нажмите " сформировать".
+                            Перейдите в раздел <a href="{{ route('journal.index') }}"
+                                class="text-judo-orange text-decoration-none fw-bold">Формирование ЖУДО</a>. Нажмите "
+                            сформировать".
                             Система соберет все данные из загруженных актов и сформирует 4 таблицы журнала учета движения
                             отходов.
                         </p>
