@@ -117,7 +117,11 @@ class AuthController extends Controller
         $user = Auth::user();
 
         // Check limit
-        $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
+        $subscriptionEnds = $user->subscription_ends_at;
+        if (is_string($subscriptionEnds)) {
+            $subscriptionEnds = \Illuminate\Support\Facades\Date::parse($subscriptionEnds);
+        }
+        $isSubscribed = $subscriptionEnds && $subscriptionEnds->isFuture();
         if (!$isSubscribed && $user->companies()->count() >= 1) {
             return response()->json(['message' => 'Без активной подписки можно создать только одну компанию.'], 403);
         }

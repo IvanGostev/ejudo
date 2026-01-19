@@ -51,6 +51,7 @@ class User extends Authenticatable implements FilamentUser, HasName
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'subscription_ends_at' => 'datetime',
         ];
     }
 
