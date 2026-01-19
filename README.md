@@ -1,59 +1,50 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ЖУДО (eJudo) - Сервис автоматизации учета отходов
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Веб-сервис для автоматического формирования Журналов учета движения отходов (ЖУДО) согласно Приказу Минприроды № 1028. Сервис позволяет загружать первичные документы (акты), автоматически распознавать данные и генерировать отчетность.
 
-## About Laravel
+## Основной функционал
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 1. Авторизация и Управление Компанией
+*   **Вход по номеру телефона**: Быстрая авторизация через СМС код.
+*   **Мультикомпания**: Возможность заведения нескольких организаций (ИП/ООО) в одном аккаунте.
+*   **Роли пользователей**:
+    *   *Отходообразователь*: Для тех, кто передает отходы.
+    *   *Переработчик отходов*: Для полигонов и перерабатывающих комплексов.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 2. Загрузка и Обработка Актов
+*   **Загрузка документов**: Поддержка форматов `.doc`, `.docx`.
+*   **AI Распознавание**: Использование искусственного интеллекта (GigaChat) для извлечения данных из актов (номер, дата, контрагент, номенклатура, количество).
+*   **Справочник ФККО**: Интеграция с актуальным справочником Федерального классификационного каталога отходов для автоматического подбора кодов и классов опасности.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 3. Формирование Журнала (ЖУДО)
+*   **Автоматическое заполнение**:
+    *   *Таблица 1*: Состав образующихся отходов.
+    *   *Таблица 2*: Обобщенные данные движения отходов.
+    *   *Таблица 3*: Переданные отходы.
+    *   *Таблица 4*: Принятые отходы.
+*   **Начальные остатки**: Удобный ввод остатков на начало периода.
+*   **Периоды**: Поддержка формирования журналов за месяц, квартал или год.
+*   **Редактирование**: Возможность ручной корректировки данных в сформированном журнале прямо в интерфейсе.
 
-## Learning Laravel
+### 4. Экспорт и Отчетность
+*   **Excel**: Скачивание журнала в формате `.xls` по утвержденному образцу.
+*   **PDF**: Генерация печатной версии журнала.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 5. Подписка и Тарифы
+*   **Пробный период / Бесплатный тариф**:
+    *   Создание 1 компании.
+    *   Хранение данных 30 дней.
+    *   Просмотр журнала в веб-интерфейсе.
+*   **Платная подписка**:
+    *   Неограниченное количество компаний.
+    *   Хранение данных 5 лет.
+    *   Скачивание отчетов в Excel и PDF.
+*   **Оплата**: Интеграция с ЮKassa для приема платежей.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 6. Технические особенности
+*   **Безопасность**: Защита данных, автоматическое резервное копирование.
+*   **Очистка данных**: Автоматическое удаление устаревших данных согласно тарифу пользователя (через 30 дней для бесплатных, через 5 лет для платных аккаунтов).
 
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Контакты
+Сайт разработан Гостевым Иваном.
+*   Telegram: [ivangostevdeveloper](https://t.me/ivangostevdeveloper)
