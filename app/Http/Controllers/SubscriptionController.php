@@ -18,7 +18,11 @@ class SubscriptionController extends Controller
         // Check if subscribed
         $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
 
-        return view('subscription.index', compact('company', 'isSubscribed'));
+        return view('subscription.index', [
+            'company' => $company,
+            'isSubscribed' => $isSubscribed,
+            'subscriptionEndsAt' => $user->subscription_ends_at,
+        ]);
     }
 
     public function success()
