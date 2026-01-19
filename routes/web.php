@@ -37,9 +37,15 @@ Route::middleware('auth')->group(function () {
         Route::resource('acts', \App\Http\Controllers\ActController::class);
         Route::resource('journal', \App\Http\Controllers\JournalController::class);
 
+        Route::delete('/acts/{act}/item/{itemIndex}', [\App\Http\Controllers\ActController::class, 'destroyItem'])->name('acts.destroy-item');
+
         Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'index'])->name('profile.index');
         Route::get('/instruction', [\App\Http\Controllers\InstructionController::class, 'index'])->name('instruction.index');
         Route::get('/subscription', [\App\Http\Controllers\SubscriptionController::class, 'index'])->name('subscription.index');
+        Route::post('/subscription/create', [\App\Http\Controllers\SubscriptionController::class, 'create'])->name('subscription.create');
+        Route::get('/subscription/callback', [\App\Http\Controllers\SubscriptionController::class, 'callback'])->name('subscription.callback');
+        Route::get('/success', [\App\Http\Controllers\SubscriptionController::class, 'success'])->name('payment.success');
+        Route::any('/notification', [\App\Http\Controllers\SubscriptionController::class, 'webhook'])->name('subscription.webhook')->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
         Route::get('/fkko/search', [\App\Http\Controllers\FkkoController::class, 'search'])->name('fkko.search');
         Route::get('/fkko', function () {
             return "FKKO Reference (Placeholder)";

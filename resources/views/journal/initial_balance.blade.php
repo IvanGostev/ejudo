@@ -30,6 +30,8 @@
 
                             <div class="d-flex justify-content-end border-top pt-3">
                                 <a href="{{ route('journal.index') }}" class="btn btn-light me-2">Отмена</a>
+                                <button type="submit" class="btn btn-dark me-2"
+                                    onclick="clearWastesAndSubmit(event)">Продолжить без ввода остатков</button>
                                 <button type="submit" class="btn btn-primary px-4">Сохранить и продолжить</button>
                             </div>
                         </form>
@@ -138,11 +140,11 @@
                                         a.href = '#';
                                         a.className = 'list-group-item list-group-item-action py-2';
                                         a.innerHTML = `
-                                                    <div class="d-flex justify-content-between">
-                                                        <span class="fw-medium text-wrap" style="font-size:0.9em;">${item.name}</span>
-                                                        <span class="badge bg-secondary ms-2 align-self-start">${item.code}</span>
-                                                    </div>
-                                                `;
+                                                            <div class="d-flex justify-content-between">
+                                                                <span class="fw-medium text-wrap" style="font-size:0.9em;">${item.name}</span>
+                                                                <span class="badge bg-secondary ms-2 align-self-start">${item.code}</span>
+                                                            </div>
+                                                        `;
                                         a.onclick = (e) => {
                                             e.preventDefault();
 
@@ -198,6 +200,16 @@
 
             // Add first row by default
             addRow();
+
+            window.clearWastesAndSubmit = function (e) {
+                // Prevent default submission to modify DOM first if needed, or if we use formatAction
+                // Actually, simply clearing the container is enough
+                const container = document.getElementById('wastes-container');
+                container.innerHTML = '';
+                // Since this button is type="submit" inside the form, it will submit after this click handler unless we preventDefault.
+                // We want it to submit.
+                return true;
+            };
         });
     </script>
 @endsection

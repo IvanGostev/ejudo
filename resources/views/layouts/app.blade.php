@@ -14,6 +14,7 @@
 
     <!-- Styles -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root {
             --bs-primary: #FF4C2B;
@@ -133,14 +134,12 @@
                     <li class="nav-item">
                         <a href="{{ route('dashboard') }}"
                             class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                            <i class="bi bi-grid-1x2-fill me-2"></i>
                             Загрузка Актов
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('companies.index') }}"
                             class="nav-link {{ request()->routeIs('companies.*') ? 'active' : '' }}">
-                            <i class="bi bi-building me-2"></i>
                             Мои компании
                         </a>
                     </li>
@@ -198,17 +197,17 @@
                         </script>
 
 
-                    </div>
 
-                    <!-- Logout Button -->
-                    <form action="{{ route('logout') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-outline-light btn-sm">
-                            <i class="bi bi-box-arrow-right"></i> Выйти
-                        </button>
-                    </form>
+
+                        <!-- Logout Button -->
+                        <form action="{{ route('logout') }}" method="POST" class="d-inline ms-3">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-light btn-sm">
+                                <i class="bi bi-box-arrow-right"></i> Выйти
+                            </button>
+                        </form>
+                    </div>
                 </div>
-            </div>
     </nav>
 
     <div class="container-fluid">
@@ -230,12 +229,12 @@
                     </div>
                     <div id="tree-content">
                         <!-- Default Blocks -->
-                        <div class="mb-2"><i class="bi bi-folder me-1 text-warning"></i> Блок 1. Отходы с/х</div>
-                        <div class="mb-2"><i class="bi bi-folder me-1 text-warning"></i> Блок 2. Отходы добычи</div>
-                        <div class="mb-2"><i class="bi bi-folder me-1 text-warning"></i> Блок 3. Обрабатывающие</div>
-                        <div class="ms-3 mb-1"><i class="bi bi-file-earmark-text me-1"></i> 3 01 ... Древесина</div>
-                        <div class="ms-3 mb-1"><i class="bi bi-file-earmark-text me-1"></i> 3 02 ... Бумага</div>
-                        <div class="mb-2"><i class="bi bi-folder me-1 text-warning"></i> Блок 4. Потребление</div>
+                        <div class="mb-2">Блок 1. Отходы с/х</div>
+                        <div class="mb-2">Блок 2. Отходы добычи</div>
+                        <div class="mb-2">Блок 3. Обрабатывающие</div>
+                        <div class="ms-3 mb-1">3 01 ... Древесина</div>
+                        <div class="ms-3 mb-1">3 02 ... Бумага</div>
+                        <div class="mb-2">Блок 4. Потребление</div>
                         <p class="mt-3 fst-italic text-center">Введите поисковый запрос...</p>
                     </div>
                 </div>
@@ -252,13 +251,13 @@
                                     // Restore default view if empty
                                     if (query.length === 0) {
                                         $('#tree-content').html(`
-                                                                <div class="mb-2"><i class="bi bi-folder me-1 text-warning"></i> Блок 1. Отходы с/х</div>
-                                                                <div class="mb-2"><i class="bi bi-folder me-1 text-warning"></i> Блок 2. Отходы добычи</div>
-                                                                <div class="mb-2"><i class="bi bi-folder me-1 text-warning"></i> Блок 3. Обрабатывающие</div>
-                                                                <div class="ms-3 mb-1"><i class="bi bi-file-earmark-text me-1"></i> 3 01 ... Древесина</div>
-                                                                <div class="ms-3 mb-1"><i class="bi bi-file-earmark-text me-1"></i> 3 02 ... Бумага</div>
-                                                                <div class="mb-2"><i class="bi bi-folder me-1 text-warning"></i> Блок 4. Потребление</div>
-                                                            `);
+                                                    <div class="mb-2">Блок 1. Отходы с/х</div>
+                                                    <div class="mb-2">Блок 2. Отходы добычи</div>
+                                                    <div class="mb-2">Блок 3. Обрабатывающие</div>
+                                                    <div class="ms-3 mb-1">3 01 ... Древесина</div>
+                                                    <div class="ms-3 mb-1">3 02 ... Бумага</div>
+                                                    <div class="mb-2">Блок 4. Потребление</div>
+                                                `);
                                     }
                                     return;
                                 }
@@ -274,13 +273,13 @@
                                             } else {
                                                 data.forEach(item => {
                                                     html += `
-                                                                            <div class="mb-2 border-bottom pb-1" title="${item.name}" 
-                                                                                 style="cursor: pointer;"
-                                                                                 onclick="window.location.href='{{ route('acts.manual.create') }}?fkko_code=${item.code}'">
-                                                                                <div class="fw-bold text-dark">${item.code}</div>
-                                                                                <div class="text-truncate">${item.name}</div>
-                                                                            </div>
-                                                                        `;
+                                                                                                <div class="mb-2 border-bottom pb-1" title="${item.name}" 
+                                                                                                     style="cursor: pointer;"
+                                                                                                     onclick="window.location.href='{{ route('acts.manual.create') }}?fkko_code=${item.code}'">
+                                                                                                    <div class="fw-bold text-dark">${item.code}</div>
+                                                                                                    <div class="text-truncate">${item.name}</div>
+                                                                                                </div>
+                                                                                            `;
                                                 });
                                             }
                                             $('#tree-content').html(html);
@@ -301,7 +300,7 @@
                     <div class="alert alert-success">{{ session('success') }}</div>
                 @endif
                 @if(session('error'))
-                    <div class="alert alert-danger">{{ session('error') }}</div>
+                    <div class="alert alert-danger">{!! session('error') !!}</div>
                 @endif
 
                 @yield('content')

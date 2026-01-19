@@ -12,6 +12,7 @@ class JudoJournal extends Model
 
     protected $fillable = [
         'period',
+        'type', // 'month', 'quarter', 'year'
         'company_id',
         'role',
         'table1_data',

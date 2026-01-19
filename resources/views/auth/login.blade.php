@@ -47,6 +47,33 @@
                             class="bi bi-telephone me-1"></i>+7 (999) 123-45-67</a>
                 </p>
             </div>
+
+            <div class="mt-4 text-center">
+                <a href="#" class="text-decoration-none text-muted small" data-bs-toggle="modal" data-bs-target="#devModal">
+                    <i class="bi bi-code-slash me-1"></i>Разработка сайта
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="devModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Разработка сайта</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Данный сайт разработал Иван Гостев. Создаю сайты любой сложности и любого типа. Буду рад обсудить ваш
+                        проект. Пишите для сотрудничества.</p>
+                </div>
+                <div class="modal-footer">
+                    <a href="https://t.me/ivangostevdeveloper" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-telegram me-1"></i>Связаться
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 

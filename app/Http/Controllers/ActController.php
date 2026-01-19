@@ -119,7 +119,69 @@ class ActController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $act = \App\Models\Act::findOrFail($id);
+        $data = $act->act_data;
+
+        $field = $request->input('field');
+        $value = $request->input('value');
+        $itemIndex = $request->input('item_index'); // This will be null if not provided, or an integer
+
+        // Root fields: date, number, provider, receiver
+        if (in_array($field, ['date', 'number', 'provider', 'receiver'])) {
+            // Check if we need to SPLIT the act
+            // This happens if:
+            // 1. The act has multiple items.
+            // 2. The edit is for a specific item (itemIndex is provided).
+            // 3. The user wants to change a root field for *that specific item* only.
+            if (isset($data['items']) && count($data['items']) > 1 && $itemIndex !== null && isset($data['items'][$itemIndex])) {
+                // --- SPLIT LOGIC ---
+
+                // 1. Create a new Act instance by replicating the original
+                $newAct = $act->replicate();
+                $newAct->status = 'processed'; // Ensure status is correct for new act
+
+                // 2. Prepare data for the new Act
+                $newDataForNewAct = $data; // Start with a copy of the original act_data
+                $targetItem = $data['items'][$itemIndex]; // Get the item to be moved
+
+                // The new Act will contain ONLY this target item
+                $newDataForNewAct['items'] = [$targetItem];
+                // Apply the update to the root field in the new Act's data
+                $newDataForNewAct[$field] = $value;
+                $newAct->act_data = $newDataForNewAct;
+                $newAct->save();
+
+                // 3. Modify the original Act: remove the item that was moved to the new Act
+                unset($data['items'][$itemIndex]);
+                // Re-index the array to prevent gaps
+                $data['items'] = array_values($data['items']);
+                $act->act_data = $data;
+                $act->save();
+
+                // Return response indicating a split occurred
+                return response()->json([
+                    'success' => true,
+                    'split' => true,
+                    'new_act_id' => $newAct->id,
+                    'new_item_index' => 0 // The moved item is now the first (and only) item in the new act
+                ]);
+            }
+
+            // If not splitting (e.g., only one item in the act, or itemIndex not provided),
+            // then update the root field directly on the current act.
+            $data[$field] = $value;
+        }
+        // Item-level fields
+        elseif (in_array($field, ['quantity', 'name'])) {
+            if (isset($data['items'][$itemIndex])) {
+                $data['items'][$itemIndex][$field] = $value;
+            }
+        }
+
+        $act->act_data = $data;
+        $act->save();
+
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -127,6 +189,31 @@ class ActController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $act = \App\Models\Act::findOrFail($id);
+        $act->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function destroyItem(string $id, int $itemIndex)
+    {
+        $act = \App\Models\Act::findOrFail($id);
+        $data = $act->act_data;
+
+        if (isset($data['items']) && isset($data['items'][$itemIndex])) {
+            unset($data['items'][$itemIndex]);
+            // Re-index array to prevent gaps
+            $data['items'] = array_values($data['items']);
+
+            // If no items left, delete the act? Or keep empty act?
+            // User likely expects "Deleting report" -> if it's the last one, the Act itself is gone.
+            if (empty($data['items'])) {
+                $act->delete();
+            } else {
+                $act->act_data = $data;
+                $act->save();
+            }
+        }
+
+        return response()->json(['success' => true]);
     }
 }

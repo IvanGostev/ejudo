@@ -35,21 +35,33 @@ class DashboardController extends Controller
                     return true;
 
                 $data = $act->act_data;
-                // Try to parse document date, fallback to uploaded date (created_at)
-                // Ideally we use the document date found in the Act
                 $dateVal = $data['date'] ?? null;
 
+                // Determine Act Date
                 if ($dateVal) {
                     try {
-                        $d = \Carbon\Carbon::parse($dateVal);
-                        return $d->format('Y-m') === $selectedPeriod;
+                        $actDate = \Carbon\Carbon::parse($dateVal);
                     } catch (\Exception $e) {
-                        // ignore parse error and fall through
+                        $actDate = $act->created_at;
                     }
+                } else {
+                    $actDate = $act->created_at;
                 }
 
-                // Fallback to Created At if parsing failed or date missing
-                return $act->created_at->format('Y-m') === $selectedPeriod;
+                // Parse Selected Period
+                if (strlen($selectedPeriod) === 4) {
+                    // Year (YYYY)
+                    return $actDate->year == $selectedPeriod;
+                } elseif (str_contains($selectedPeriod, '-Q')) {
+                    // Quarter (YYYY-Qx)
+                    $parts = explode('-Q', $selectedPeriod);
+                    $year = $parts[0];
+                    $quarter = $parts[1];
+                    return $actDate->year == $year && $actDate->quarter == $quarter;
+                } else {
+                    // Month (YYYY-MM)
+                    return $actDate->format('Y-m') === $selectedPeriod;
+                }
             });
 
             // Process data for tables using ONLY the filtered acts
@@ -66,7 +78,7 @@ class DashboardController extends Controller
                 // Determine direction
                 // For demo purposes, we'll put everything in "Transferred" 
 
-                foreach ($data['items'] as $item) {
+                foreach ($data['items'] as $itemIndex => $item) {
                     $name = $item['name'] ?? 'Неизвестный отход';
                     $qty = (float) ($item['quantity'] ?? 0);
                     $unit = $item['unit'] ?? 'т';
@@ -177,9 +189,12 @@ class DashboardController extends Controller
                     // If we are definitely the Executor, we received the waste
                     if ($isExecutor) {
                         $received->push([
+                            'id' => $act->id,
+                            'item_index' => $itemIndex,
                             'date' => $date,
                             'number' => $actNumber,
                             'counterparty' => $receiver, // From Customer
+                            'counterparty_field' => 'receiver',
                             'waste' => $name,
                             'amount' => $qty,
                             'unit' => $unit
@@ -189,9 +204,12 @@ class DashboardController extends Controller
                     // If we are definitely the Customer, we transferred the waste
                     elseif ($isCustomer) {
                         $transferred->push([
+                            'id' => $act->id,
+                            'item_index' => $itemIndex,
                             'date' => $date,
                             'number' => $actNumber,
                             'counterparty' => $provider, // To Provider
+                            'counterparty_field' => 'provider',
                             'waste' => $name,
                             'amount' => $qty,
                             'unit' => $unit
@@ -205,18 +223,24 @@ class DashboardController extends Controller
                         // Let's bias towards populating Table 4 if it's Utilisation/Neutralization
                         if (in_array(mb_strtolower($operationType), ['утилизация', 'обезвреживание', 'захоронение'])) {
                             $received->push([
+                                'id' => $act->id,
+                                'item_index' => $itemIndex,
                                 'date' => $date,
                                 'number' => $actNumber,
                                 'counterparty' => $receiver, // Who gave it to us (Customer)
+                                'counterparty_field' => 'receiver',
                                 'waste' => $name,
                                 'amount' => $qty,
                                 'unit' => $unit
                             ]);
                         } else {
                             $transferred->push([
+                                'id' => $act->id,
+                                'item_index' => $itemIndex,
                                 'date' => $date,
                                 'number' => $actNumber,
                                 'counterparty' => $provider, // Who we gave it to
+                                'counterparty_field' => 'provider',
                                 'waste' => $name,
                                 'amount' => $qty,
                                 'unit' => $unit
@@ -229,14 +253,47 @@ class DashboardController extends Controller
 
         $userCompanies = auth()->user()->companies;
 
-        // Generate periods for dropdown (Last 12 months)
+        // Generate periods for dropdown
         $periods = [];
+
+        // 1. Years (Current + Last)
+        $now = now();
+        $periods[$now->year] = $now->year . ' год';
+        $periods[$now->year - 1] = ($now->year - 1) . ' год';
+
+        $periods['divider1'] = '---'; // Divider logic in view
+
+        // 2. Quarters (Current Year + Last Year)
+        // Current Year Quarters
+        for ($q = 1; $q <= 4; $q++) {
+            // Only show quarters that have started? Or all? Let's show all for planning/viewing.
+            // Or maybe only up to current quarter? User asked for "Quarter and Year".
+            $periods[$now->year . '-Q' . $q] = $q . ' кв. ' . $now->year;
+        }
+        // Last Year Quarters
+        for ($q = 1; $q <= 4; $q++) {
+            $periods[($now->year - 1) . '-Q' . $q] = $q . ' кв. ' . ($now->year - 1);
+        }
+
+        $periods['divider2'] = '---';
+
+        // 3. Months (Last 12)
         $current = now()->startOfMonth();
         for ($i = 0; $i < 12; $i++) {
             $periods[$current->format('Y-m')] = \Illuminate\Support\Str::ucfirst($current->translatedFormat('F Y'));
             $current->subMonth();
         }
 
-        return view('dashboard', compact('acts', 'wasteComposition', 'transferred', 'received', 'company', 'userCompanies', 'selectedPeriod', 'periods'));
+        $wasteList = \App\Models\FkkoCode::orderBy('name')->pluck('name')->unique()->values();
+
+        // Check if this is an AJAX request to refresh tables
+        if ($request->ajax() && $request->has('refresh_tables')) {
+            return response()->json([
+                'table1_html' => view('partials.dashboard_table1', compact('wasteComposition'))->render(),
+                'table2_html' => view('partials.dashboard_table2', compact('wasteComposition', 'transferred', 'received'))->render(),
+            ]);
+        }
+
+        return view('dashboard', compact('acts', 'wasteComposition', 'transferred', 'received', 'company', 'userCompanies', 'selectedPeriod', 'periods', 'wasteList'));
     }
 }

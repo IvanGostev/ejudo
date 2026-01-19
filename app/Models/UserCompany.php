@@ -21,10 +21,12 @@ class UserCompany extends Model
         'phone',
         'email',
         'is_active',
+        'subscription_expires_at',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'subscription_expires_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

@@ -1,11 +1,28 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        $periodDate = \Carbon\Carbon::parse($journal->period);
+        $periodStr = \Illuminate\Support\Str::ucfirst($periodDate->translatedFormat('F Y'));
+        $startDate = $periodDate->copy()->startOfMonth();
+        $endDate = $periodDate->copy()->endOfMonth();
+
+        if (($journal->type ?? 'month') === 'quarter') {
+            $q = ceil($periodDate->month / 3);
+            $periodStr = $q . ' квартал ' . $periodDate->year . ' года';
+            // Period stored is start of the quarter
+            $endDate = $periodDate->copy()->addMonths(2)->endOfMonth();
+        } elseif (($journal->type ?? 'month') === 'year') {
+            $periodStr = $periodDate->year . ' год';
+            $startDate = $periodDate->copy()->startOfYear();
+            $endDate = $periodDate->copy()->endOfYear();
+        }
+    @endphp
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="mb-0">Журнал учета движения отходов</h4>
             <p class="text-muted mb-0">
-                Период: {{ \Carbon\Carbon::parse($journal->period)->translatedFormat('F Y') }} |
+                Период: {{ $periodStr }} |
                 Компания: {{ $journal->company->name ?? '-' }}
             </p>
         </div>
@@ -19,6 +36,10 @@
     </div>
 
     <div class="card shadow-sm border-0">
+        <style>
+            tr:hover .row-number { visibility: hidden; }
+            tr:hover .delete-row-btn { display: inline-block !important; }
+        </style>
         <div class="card-header bg-white border-bottom-0 pt-4 px-4">
             <ul class="nav nav-tabs card-header-tabs" role="tablist">
                 <li class="nav-item">
@@ -47,11 +68,11 @@
                         
                         <div class="text-center mt-4">
                             <h2 class="fw-bold text-uppercase mb-2">ЖУРНАЛ УЧЕТА ДВИЖЕНИЯ ОТХОДОВ</h2>
-                            <div class="fs-5 mb-0">за <u>{{ \Carbon\Carbon::parse($journal->period)->translatedFormat('F Y') }}</u></div>
+                            <div class="fs-5 mb-0">за <u>{{ $periodStr }}</u></div>
                             <div class="small text-muted mb-3">(месяц, год)</div>
                             
                             <div class="mb-4">
-                                {{ \Carbon\Carbon::parse($journal->period)->startOfMonth()->format('d.m.Y') }} - {{ \Carbon\Carbon::parse($journal->period)->endOfMonth()->format('d.m.Y') }}
+                                {{ $startDate->format('d.m.Y') }} - {{ $endDate->format('d.m.Y') }}
                             </div>
                             <div class="small text-muted" style="margin-top: -1.5rem;">(дата начала ведения журнала) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (дата окончания ведения журнала)</div>
                         </div>
@@ -231,23 +252,31 @@
                                 <tbody>
                                     @php $row = 1;
                                     $totalTrans = 0; @endphp
-                                    @forelse($journal->table3_data as $item)
+                                    @forelse($journal->table3_data as $index => $item)
                                         @php $totalTrans += (float) $item['amount']; @endphp
                                         <tr>
-                                            <td>{{ $row++ }}</td>
-                                            <td>{{ \Carbon\Carbon::parse($item['date'])->format('d.m.Y') }}</td>
-                                            <td>{{ $item['number'] }}</td>
-                                            <td class="text-start">{{ $item['waste'] }}</td>
-                                            <td>{{ $item['fkko'] }}</td>
-                                            <td>{{ $item['hazard'] }}</td>
-                                            <td class="text-start">{{ $item['counterparty'] }}</td>
-                                            <td><strong>{{ rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') }}</strong>
+                                            <td class="position-relative">
+                                                <span class="row-number">{{ $loop->iteration }}</span>
+                                                <button class="btn btn-sm btn-dark text-white p-0 border-0 delete-row-btn position-absolute top-50 start-50 translate-middle"
+                                                        style="display: none; width: 24px; height: 24px; z-index: 100;"
+                                                        title="Удалить строку"
+                                                        data-table="table3_data"
+                                                        data-row="{{ $index }}">
+                                                    <i class="bi bi-trash text-white"></i>
+                                                </button>
                                             </td>
-                                            <td></td>
-                                            <td>{{ rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') }}</td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
+                                            <td class="editable" data-table="table3_data" data-row="{{ $index }}" data-column="date">{{ \Carbon\Carbon::parse($item['date'])->format('d.m.Y') }}</td>
+                                            <td class="editable" data-table="table3_data" data-row="{{ $index }}" data-column="number">{{ $item['number'] }}</td>
+                                            <td class="editable text-start" data-table="table3_data" data-row="{{ $index }}" data-column="waste">{{ $item['waste'] }}</td>
+                                            <td class="editable" data-table="table3_data" data-row="{{ $index }}" data-column="fkko">{{ $item['fkko'] }}</td>
+                                            <td data-table="table3_data" data-row="{{ $index }}" data-column="hazard">{{ $item['hazard'] }}</td>
+                                            <td class="editable text-start" data-table="table3_data" data-row="{{ $index }}" data-column="counterparty">{{ $item['counterparty'] }}</td>
+                                            <td class="editable" data-table="table3_data" data-row="{{ $index }}" data-column="amount"><strong>{{ rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') }}</strong></td>
+                                            <td class="editable" data-table="table3_data" data-row="{{ $index }}" data-column="p_process">{{ $item['p_process'] ?? (str_contains($item['operation']??'', 'обраб') ? rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') : '') }}</td>
+                                            <td class="editable" data-table="table3_data" data-row="{{ $index }}" data-column="p_util">{{ $item['p_util'] ?? (str_contains($item['operation']??'', 'утилиз') ? rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') : '') }}</td>
+                                            <td class="editable" data-table="table3_data" data-row="{{ $index }}" data-column="p_neutr">{{ $item['p_neutr'] ?? (str_contains($item['operation']??'', 'обезвреж') ? rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') : '') }}</td>
+                                            <td class="editable" data-table="table3_data" data-row="{{ $index }}" data-column="p_store">{{ $item['p_store'] ?? (str_contains($item['operation']??'', 'хран') ? rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') : '') }}</td>
+                                            <td class="editable" data-table="table3_data" data-row="{{ $index }}" data-column="p_bury">{{ $item['p_bury'] ?? (str_contains($item['operation']??'', 'захор') ? rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') : '') }}</td>
                                         </tr>
                                     @empty
                                         <tr>
@@ -257,7 +286,7 @@
                                     @if(count($journal->table3_data) > 0)
                                         <tr class="fw-bold bg-light">
                                             <td colspan="7" class="text-end">Итого:</td>
-                                            <td>{{ rtrim(rtrim(number_format($totalTrans, 3), '0'), '.') }}</td>
+                                            <td id="total-table3_data">{{ rtrim(rtrim(number_format($totalTrans, 3), '0'), '.') }}</td>
                                             <td colspan="5"></td>
                                         </tr>
                                     @endif
@@ -293,20 +322,29 @@
                                 </thead>
                                 <tbody>
                                     @php $row=1; $totalRec=0; @endphp
-                                    @forelse($journal->table4_data as $item)
+                                    @forelse($journal->table4_data as $index => $item)
                                         @php $totalRec += (float)$item['amount']; @endphp
                                         <tr>
-                                            <td>{{ $row++ }}</td>
-                                            <td>{{ \Carbon\Carbon::parse($item['date'])->format('d.m.Y') }}</td>
-                                            <td>{{ $item['number'] }}</td>
-                                            <td class="text-start">{{ $item['waste'] }}</td>
-                                            <td>{{ $item['fkko'] }}</td>
-                                            <td>{{ $item['hazard'] }}</td>
-                                            <td class="text-start">{{ $item['counterparty'] }}</td>
-                                            <td><strong>{{ rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') }}</strong></td>
-                                            <td></td>
-                                            <td>{{ rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') }}</td>
-                                            <td></td>
+                                            <td class="position-relative">
+                                                <span class="row-number">{{ $loop->iteration }}</span>
+                                                <button class="btn btn-sm btn-dark text-white p-0 border-0 delete-row-btn position-absolute top-50 start-50 translate-middle"
+                                                        style="display: none; width: 24px; height: 24px; z-index: 100;"
+                                                        title="Удалить строку"
+                                                        data-table="table4_data"
+                                                        data-row="{{ $index }}">
+                                                    <i class="bi bi-trash text-white"></i>
+                                                </button>
+                                            </td>
+                                            <td class="editable" data-table="table4_data" data-row="{{ $index }}" data-column="date">{{ \Carbon\Carbon::parse($item['date'])->format('d.m.Y') }}</td>
+                                            <td class="editable" data-table="table4_data" data-row="{{ $index }}" data-column="number">{{ $item['number'] }}</td>
+                                            <td class="editable text-start" data-table="table4_data" data-row="{{ $index }}" data-column="waste">{{ $item['waste'] }}</td>
+                                            <td class="editable" data-table="table4_data" data-row="{{ $index }}" data-column="fkko">{{ $item['fkko'] }}</td>
+                                            <td data-table="table4_data" data-row="{{ $index }}" data-column="hazard">{{ $item['hazard'] }}</td>
+                                            <td class="editable text-start" data-table="table4_data" data-row="{{ $index }}" data-column="counterparty">{{ $item['counterparty'] }}</td>
+                                            <td class="editable" data-table="table4_data" data-row="{{ $index }}" data-column="amount"><strong>{{ rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') }}</strong></td>
+                                            <td class="editable" data-table="table4_data" data-row="{{ $index }}" data-column="p_process">{{ $item['p_process'] ?? (str_contains($item['operation']??'', 'обраб') ? rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') : '') }}</td>
+                                            <td class="editable" data-table="table4_data" data-row="{{ $index }}" data-column="p_util">{{ $item['p_util'] ?? (str_contains($item['operation']??'', 'утилиз') ? rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') : '') }}</td>
+                                            <td class="editable" data-table="table4_data" data-row="{{ $index }}" data-column="p_neutr">{{ $item['p_neutr'] ?? (str_contains($item['operation']??'', 'обезвреж') ? rtrim(rtrim(number_format($item['amount'], 3), '0'), '.') : '') }}</td>
                                         </tr>
                                     @empty
                                         <tr><td colspan="12">Нет данных</td></tr>
@@ -314,7 +352,7 @@
                                     @if(count($journal->table4_data) > 0)
                                         <tr class="fw-bold bg-light">
                                             <td colspan="7" class="text-end">Итого:</td>
-                                            <td>{{ rtrim(rtrim(number_format($totalRec, 3), '0'), '.') }}</td>
+                                            <td id="total-table4_data">{{ rtrim(rtrim(number_format($totalRec, 3), '0'), '.') }}</td>
                                             <td colspan="3"></td>
                                         </tr>
                                     @endif
@@ -327,4 +365,256 @@
             </div>
         </div>
     </div>
+    
+    <script>
+        const wasteOptions = @json($wastes ?? []);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Функция пересчета итогов
+            const recalculateTotal = (tableName) => {
+                const totalCell = document.getElementById(`total-${tableName}`);
+                if (!totalCell) return;
+
+                let total = 0;
+                document.querySelectorAll(`td[data-table="${tableName}"][data-column="amount"]`).forEach(td => {
+                    // Удаляем пробелы и запятые (разделители тысяч) перед парсингом. Десятичный разделитель - точка.
+                    let raw = td.innerText.replace(/,/g, '').trim(); 
+                    let val = parseFloat(raw) || 0;
+                    total += val;
+                });
+
+                // Форматирование: до 3 знаков, удаление лишних нулей
+                // Для итогов разделитель тысяч тоже может быть полезен, но пока вернем просто число или отформатированное
+                // number_format в JS аналог:
+                let s = total.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 3});
+                // toLocaleString('en-US') использует запятые как разделители тысяч и точку как десятичный.
+                
+                s = s.replace(/\.?0+$/, '');
+                totalCell.innerText = s;
+            };
+
+            const handleRowDeletion = (row, tableName) => {
+                const tableBody = row.closest('tbody');
+                row.remove();
+                
+                // Перенумерация строк и обновление индексов data-row
+                let rowNum = 1;
+                let dataRowIndex = 0;
+                tableBody.querySelectorAll('tr').forEach(tr => {
+                    // Пропускаем строки без обычных ячеек (например, "Итого" с colspan)
+                    const firstCell = tr.cells[0];
+                    if (firstCell && !firstCell.hasAttribute('colspan')) {
+                        const numSpan = firstCell.querySelector('.row-number');
+                        if (numSpan) numSpan.innerText = rowNum++;
+                        else firstCell.innerText = rowNum++; // Fallback
+                        
+                        // Обновляем индекс строки для будущих запросов (включая кнопку удаления)
+                        tr.querySelectorAll('[data-row]').forEach(el => {
+                            el.dataset.row = dataRowIndex;
+                        });
+                        dataRowIndex++;
+                    }
+                });
+
+                recalculateTotal(tableName);
+            };
+
+            // Обработчик кнопки удаления
+            document.body.addEventListener('click', async function(e) {
+                const btn = e.target.closest('.delete-row-btn');
+                if (!btn) return;
+
+                if (!confirm('Вы уверены, что хотите удалить эту строку?')) return;
+
+                const table = btn.dataset.table;
+                const rowIndex = btn.dataset.row;
+                const row = btn.closest('tr');
+
+                try {
+                    const response = await fetch('{{ route('journal.update', $journal->id) }}', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            table: table,
+                            row_index: rowIndex,
+                            column: 'amount', // Установка 0 triggers deletion
+                            value: 0
+                        })
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed');
+                    const data = await response.json();
+
+                    if (data.action === 'deleted') {
+                        handleRowDeletion(row, table);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Ошибка при удалении строки');
+                }
+            });
+
+            document.querySelectorAll('.editable').forEach(cell => {
+                cell.style.cursor = 'pointer';
+                cell.title = 'Нажмите для изменения';
+                
+                cell.addEventListener('click', function() {
+                    if (this.isEditing) return;
+                    this.isEditing = true;
+                    
+                    const column = this.dataset.column;
+                    const originalValue = this.innerText.trim();
+                    let input;
+
+                    // Логика выпадающего списка отходов
+                    if (column === 'waste') {
+                        input = document.createElement('select');
+                        input.className = 'form-select form-select-sm p-0 border-0 shadow-none bg-transparent';
+                        
+                        // Заполнение опций
+                        let found = false;
+                        wasteOptions.forEach(w => {
+                            const opt = document.createElement('option');
+                            opt.value = w.name;
+                            opt.text = w.name;
+                            if (w.name === originalValue) {
+                                opt.selected = true;
+                                found = true;
+                            }
+                            input.appendChild(opt);
+                        });
+                        
+                        // Сохранение исходного значения, если его нет в списке
+                        if (!found && originalValue) {
+                            const opt = document.createElement('option');
+                            opt.value = originalValue;
+                            opt.text = originalValue;
+                            opt.selected = true;
+                            input.appendChild(opt);
+                        }
+                    } else if (column === 'fkko') {
+                        input = document.createElement('select');
+                        input.className = 'form-select form-select-sm p-0 border-0 shadow-none bg-transparent';
+                        
+                        let found = false;
+                        wasteOptions.forEach(w => {
+                            const opt = document.createElement('option');
+                            opt.value = w.code;
+                            opt.text = w.code;
+                            opt.title = w.name;
+                            if (w.code === originalValue) {
+                                opt.selected = true;
+                                found = true;
+                            }
+                            input.appendChild(opt);
+                        });
+                        
+                        if (!found && originalValue) {
+                            const opt = document.createElement('option');
+                            opt.value = originalValue;
+                            opt.text = originalValue;
+                            opt.selected = true;
+                            input.appendChild(opt);
+                        }
+                    } else {
+                        // Стандартное поле ввода
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = originalValue;
+                        input.className = 'form-control form-control-sm p-0 border-0 shadow-none bg-transparent';
+                        // Сохранение выравнивания
+                        if (this.classList.contains('text-start')) {
+                            input.classList.add('text-start');
+                        } else {
+                            input.classList.add('text-center');
+                        }
+                    }
+                    
+                    input.style.width = '100%';
+                    input.style.minWidth = '50px';
+                    
+                    this.innerHTML = '';
+                    this.appendChild(input);
+                    input.focus();
+                    
+                    const save = async () => {
+                        const newValue = input.value;
+                        if (newValue === originalValue) {
+                            this.innerHTML = originalValue;
+                            this.isEditing = false;
+                            return;
+                        }
+                        
+                        try {
+                            const response = await fetch('{{ route('journal.update', $journal->id) }}', {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    table: this.dataset.table,
+                                    row_index: this.dataset.row,
+                                    column: this.dataset.column,
+                                    value: newValue
+                                })
+                            });
+                            
+                            if (!response.ok) throw new Error('Failed');
+                            
+                            const data = await response.json();
+                            
+                            // Проверка на удаление строки
+                            if (data.action === 'deleted') {
+                                handleRowDeletion(this.closest('tr'), this.dataset.table);
+                                return;
+                            }
+                            
+                            // Обновление интерфейса
+                            this.innerHTML = newValue;
+                            
+                            // Визуальное подтверждение успеха
+                            this.classList.add('bg-success-subtle');
+                            setTimeout(() => this.classList.remove('bg-success-subtle'), 1000);
+
+                            // Обработка дополнительных обновлений
+                            if (data.updates) {
+                                const row = this.closest('tr');
+                                for (const [key, val] of Object.entries(data.updates)) {
+                                    const sibling = row.querySelector(`[data-column="${key}"]`);
+                                    if (sibling) {
+                                        sibling.innerText = val;
+                                        sibling.classList.add('bg-success-subtle');
+                                        setTimeout(() => sibling.classList.remove('bg-success-subtle'), 1000);
+                                    }
+                                }
+                            }
+                            
+                            // Пересчет итогов
+                            recalculateTotal(this.dataset.table);
+
+                        } catch (e) {
+                            console.error(e);
+                            this.innerHTML = originalValue;
+                            alert('Не удалось сохранить изменения');
+                        } finally {
+                            this.isEditing = false;
+                        }
+                    };
+                    
+                    input.addEventListener('blur', save);
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            input.blur();
+                        }
+                    });
+                });
+            });
+        });
+    </script>
 @endsection

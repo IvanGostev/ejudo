@@ -19,6 +19,13 @@ class CompanyController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
+
+        if (!$isSubscribed && $user->companies()->count() >= 1) {
+            return back()->with('error', 'Без активной подписки можно создать только одну компанию. Оформите подписку для создания дополнительных компаний.');
+        }
+
         $validated = $request->validate([
             'type' => 'required|in:ООО,ИП',
             'name' => 'required|string|max:255',
@@ -32,7 +39,7 @@ class CompanyController extends Controller
             'email' => 'nullable|email|max:255',
         ]);
 
-        auth()->user()->companies()->create($validated);
+        $company = $user->companies()->create($validated);
 
         return redirect()->route('companies.index')->with('success', 'Компания успешно добавлена');
     }

@@ -97,12 +97,10 @@ class AuthController extends Controller
             $this->tenantService->setCompany($company);
         }
 
-        $redirectUrl = null;
+        $redirectUrl = route('dashboard');
         if ($isNewUser) {
             $redirectUrl = route('instruction.index');
-        } elseif ($company) {
-            $redirectUrl = route('dashboard');
-        } else {
+        } elseif (!$company) {
             $redirectUrl = route('company.create');
         }
 
@@ -116,6 +114,14 @@ class AuthController extends Controller
 
     public function registerCompany(Request $request): JsonResponse
     {
+        $user = Auth::user();
+
+        // Check limit
+        $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
+        if (!$isSubscribed && $user->companies()->count() >= 1) {
+            return response()->json(['message' => 'Без активной подписки можно создать только одну компанию.'], 403);
+        }
+
         $request->validate([
             'name' => 'required|string',
             'inn' => 'required|string|size:10,12', // 10 for Juridical, 12 for IP (though strict validation varies)

@@ -21,18 +21,38 @@ class JournalController extends Controller
                 ->get();
         }
 
-        return view('journal.index', compact('journals'));
+        // Генерация периодов для выпадающего списка
+        $periods = [];
+        $now = now();
+        // 1. Годы
+        $periods[$now->year] = $now->year . ' год';
+        $periods[$now->year - 1] = ($now->year - 1) . ' год';
+        $periods['divider1'] = '---';
+        // 2. Кварталы
+        for ($q = 1; $q <= 4; $q++)
+            $periods[$now->year . '-Q' . $q] = $q . ' кв. ' . $now->year;
+        for ($q = 1; $q <= 4; $q++)
+            $periods[($now->year - 1) . '-Q' . $q] = $q . ' кв. ' . ($now->year - 1);
+        $periods['divider2'] = '---';
+        // 3. Месяцы
+        $current = now()->startOfMonth();
+        for ($i = 0; $i < 12; $i++) {
+            $periods[$current->format('Y-m')] = \Illuminate\Support\Str::ucfirst($current->translatedFormat('F Y'));
+            $current->subMonth();
+        }
+
+        return view('journal.index', compact('journals', 'periods'));
     }
 
     public function create()
     {
-        // Modal is used instead
+        // Вместо этого используется модальное окно
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'period' => 'required|date_format:Y-m',
+            'period' => 'required|string',
         ]);
 
         $company = app(\App\Services\TenantService::class)->getCompany();
@@ -40,43 +60,121 @@ class JournalController extends Controller
             return back()->with('error', 'Компания не выбрана.');
         }
 
-        // Get Role (from session or default)
-        // Values: 'Отходообразователь' or 'Переработчик отходов'
+        // Получение роли
         $roleName = session('user_role', 'Отходообразователь');
         $roleKey = ($roleName === 'Переработчик отходов') ? 'waste_processor' : 'waste_generator';
 
-        // Parse Period
-        $periodDate = \Carbon\Carbon::createFromFormat('Y-m', $request->period)->startOfMonth();
+        $periodInput = trim($request->input('period'));
 
-        // 1. Check for Initial Setup (First Journal)
-        // Check if any journal ever existed for this company
+        // 1. Начальные проверки
         $anyJournalExists = \App\Models\JudoJournal::where('company_id', $company->id)->exists();
-
-        // Check if Initial Balances exist
         $initialBalancesExist = \App\Models\InitialBalance::where('company_id', $company->id)->exists();
 
-        // If this is the VERY first time (no journals, no initial balances), suggest adding them
+        // Если это первый раз
         if (!$anyJournalExists && !$initialBalancesExist) {
-            return redirect()->route('journal.initial-balance.create', ['period' => $request->period]);
+            // Parse period strictly for redirect
+            // Actually, we can just pass the raw input, but let's be safe.
+            // We need start date to format Y-m usually.
+            // But simpler: just redirect.
+            // We need to know if the input is valid though? generateJournal handles validation.
+            // Let's validate period format partially here or just try to pass 'period'.
+            // If we want 'Y-m', we might need to parse, but let's assume valid from validate rule.
+            return redirect()->route('journal.initial-balance.create', ['period' => $periodInput]);
         }
 
-        // 1. Get Previous Journal for Opening Balance
-        $prevDate = $periodDate->copy()->subMonth();
+        return $this->generateJournal($company, $periodInput, $roleKey);
+    }
+
+    private function generateJournal($company, $periodInput, $roleKey)
+    {
+        // Парсинг периода и определение типа
+        $startDate = null;
+        $endDate = null;
+        $type = 'month';
+        $periodLabel = $periodInput;
+
+        try {
+            if (strlen($periodInput) === 4 && is_numeric($periodInput)) {
+                // Год: 2024
+                $type = 'year';
+                $startDate = \Carbon\Carbon::createFromDate((int) $periodInput, 1, 1)->startOfDay();
+                $endDate = $startDate->copy()->endOfYear();
+                $periodLabel = $periodInput . ' год';
+            } elseif (str_contains($periodInput, '-Q')) {
+                // Квартал: 2024-Q1
+                $type = 'quarter';
+                $parts = explode('-Q', $periodInput);
+                $year = (int) $parts[0];
+                $quarter = (int) $parts[1];
+                // Расчет начального месяца: Q1=1, Q2=4, Q3=7, Q4=10
+                $startMonth = ($quarter - 1) * 3 + 1;
+                $startDate = \Carbon\Carbon::createFromDate($year, $startMonth, 1)->startOfDay();
+                // Дата окончания — конец 3-го месяца квартала
+                $endDate = $startDate->copy()->addMonths(2)->endOfMonth();
+                $periodLabel = $quarter . ' квартал ' . $year;
+            } else {
+                // Месяц: 2024-01
+                $type = 'month';
+                if (!preg_match('/^\d{4}-\d{2}$/', $periodInput)) {
+                    throw new \Exception("Формат Y-m ожидался, получено: $periodInput");
+                }
+                $startDate = \Carbon\Carbon::createFromFormat('Y-m', $periodInput)->startOfMonth();
+                $endDate = $startDate->copy()->endOfMonth();
+                $periodLabel = $startDate->translatedFormat('F Y');
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Journal Period Error: ' . $e->getMessage());
+            return back()->with('error', 'Неверный формат периода: ' . $periodInput . ' (' . $e->getMessage() . ')');
+        }
+
+        // 2. Получение входящих остатков
+        // Логика: Найти журнал за предыдущий период (последний перед текущим).
+        // Это позволяет обрабатывать разрывы или смешанные типы периодов (месяц/квартал).
+        // Конечный остаток предыдущего журнала становится начальным остатком текущего.
+
         $prevJournal = \App\Models\JudoJournal::where('company_id', $company->id)
-            ->where('period', $prevDate->format('Y-m-d'))
+            ->where('period', '<', $startDate->format('Y-m-d'))
             ->where('role', $roleKey)
+            ->orderBy('period', 'desc') // Сначала последние
             ->first();
 
-        // Map Previous Balances by Waste Name
-        $prevBalances = [];
-        $wasteStats = []; // Key: WasteName
+        // Уточненный поиск: нужно убедиться, что предыдущий журнал закончился ДО начала текущего.
 
-        // If no previous journal, check Initial Balances
+        $allPrev = \App\Models\JudoJournal::where('company_id', $company->id)
+            ->where('period', '<', $startDate->format('Y-m-d'))
+            ->where('role', $roleKey)
+            ->orderBy('period', 'desc')
+            ->limit(10) // Оптимизация
+            ->get();
+
+        $validPrevJournal = null;
+        foreach ($allPrev as $pj) {
+            $pjStart = \Carbon\Carbon::parse($pj->period);
+            $pjEnd = $pjStart->copy();
+            if ($pj->type === 'year')
+                $pjEnd->endOfYear();
+            elseif ($pj->type === 'quarter')
+                $pjEnd->endOfQuarter();
+            else
+                $pjEnd->endOfMonth();
+
+            // Если этот журнал заканчивается до нашей даты начала, он валидный предшественник
+            if ($pjEnd->lt($startDate)) {
+                $validPrevJournal = $pj;
+                break;
+            }
+        }
+        $prevJournal = $validPrevJournal;
+
+
+        $prevBalances = [];
+        $wasteStats = [];
+
         if (!$prevJournal) {
+            // Использование начальных остатков, если предыдущий журнал не найден
             $initials = \App\Models\InitialBalance::where('company_id', $company->id)->get();
             foreach ($initials as $init) {
                 $prevBalances[$init->waste_name] = (float) $init->amount;
-
                 $wasteStats[$init->waste_name] = [
                     'generated' => 0,
                     'used' => 0,
@@ -91,12 +189,8 @@ class JournalController extends Controller
             }
         } elseif (!empty($prevJournal->table2_data)) {
             foreach ($prevJournal->table2_data as $item) {
-
                 if (isset($item['name']) && isset($item['balance_end'])) {
                     $prevBalances[$item['name']] = (float) $item['balance_end'];
-
-                    // Pre-fill wasteStats from previous journal to preserve FKKO/Hazard details
-                    // This ensures Table 1 is populated even if there are no new acts for this waste type
                     $wasteStats[$item['name']] = [
                         'generated' => 0,
                         'used' => 0,
@@ -112,44 +206,39 @@ class JournalController extends Controller
             }
         }
 
-        // 2. Fetch Acts for the selected period
-        // Filter logic same as dashboard: check Document Date, fallback to Created At
+        // 3. Получение актов
         $acts = \App\Models\Act::where('company_id', $company->id)
             ->where('status', 'processed')
             ->get()
-            ->filter(function ($act) use ($request) {
+            ->filter(function ($act) use ($startDate, $endDate) {
                 $data = $act->act_data;
                 $dateVal = $data['date'] ?? null;
                 $actDate = $dateVal ? \Carbon\Carbon::parse($dateVal) : $act->created_at;
-                return $actDate->format('Y-m') === $request->period;
+                return $actDate->between($startDate, $endDate);
             });
 
-        // 3. Aggregate Data & Collect Details
-        // $wasteStats initialized above
-        $table3_data = []; // Transferred Details
-        $table4_data = []; // Received Details
+        // 4. Агрегация данных
+
+
+        // 4. Aggregate
+        $table3_data = [];
+        $table4_data = [];
 
         foreach ($acts as $act) {
             $data = $act->act_data;
             $items = $data['items'] ?? [];
             $operationType = mb_strtolower($data['operation_type'] ?? '');
-
             $provider = $data['provider'] ?? '';
             $receiver = $data['receiver'] ?? '';
             $actNumber = $data['number'] ?? 'б/н';
             $date = $data['date'] ?? $act->created_at->format('Y-m-d');
 
             $compName = mb_strtolower($company->name);
-            $provName = mb_strtolower($provider); // Service Provider (Executor) -> Waste Recipient
-            $recvName = mb_strtolower($receiver); // Service Customer (Client) -> Waste Generator
+            $provName = mb_strtolower($provider);
+            $recvName = mb_strtolower($receiver);
 
-            // Determine Waste Roles based on Service Roles
-            // If we are the Service Provider, we RECEIVE waste.
-            // If we are the Service Customer, we TRANSFER waste.
             $isWasteRecipient = (mb_strpos($provName, $compName) !== false);
             $isWasteGenerator = (mb_strpos($recvName, $compName) !== false);
-
-            // Internal Transfer check
             $isInternal = ($isWasteRecipient && $isWasteGenerator);
 
             foreach ($items as $item) {
@@ -162,7 +251,7 @@ class JournalController extends Controller
                 if (!isset($wasteStats[$name])) {
                     $wasteStats[$name] = [
                         'generated' => 0,
-                        'used' => 0, // Kept for legacy or total if needed, but we calculate specific now
+                        'used' => 0,
                         'utilized' => 0,
                         'neutralized' => 0,
                         'buried' => 0,
@@ -172,44 +261,30 @@ class JournalController extends Controller
                         'hazard' => $hazard
                     ];
                 }
-
-                // Update FKKO/Hazard if missing
                 if (empty($wasteStats[$name]['fkko']))
                     $wasteStats[$name]['fkko'] = $fkko;
                 if (empty($wasteStats[$name]['hazard']))
                     $wasteStats[$name]['hazard'] = $hazard;
 
-                // -------------------------------------------------------------------
-                // LOGIC: Flow based on Waste Roles
-                // -------------------------------------------------------------------
-
-                // 1. WE ARE WASTE GENERATOR (Service Customer)
-                // We generated waste and transferred it to the Service Provider
+                // Aggregation Logic
                 if ($isWasteGenerator && !$isInternal) {
-                    // Logic: Transferred -> Just Transfer. Generation strictly if explicitly stated.
                     $wasteStats[$name]['transferred'] += $qty;
-
                     $table3_data[] = [
                         'date' => $date,
                         'number' => $actNumber,
-                        'counterparty' => $provider, // We gave to Service Provider
+                        'counterparty' => $provider,
                         'waste' => $name,
                         'fkko' => $fkko,
                         'hazard' => $hazard,
                         'amount' => $qty,
                         'operation' => $opItem
                     ];
-                }
-
-                // 2. WE ARE WASTE RECIPIENT (Service Provider)
-                // We received waste from the Service Customer
-                elseif ($isWasteRecipient && !$isInternal) {
+                } elseif ($isWasteRecipient && !$isInternal) {
                     $wasteStats[$name]['received'] += $qty;
-
                     $table4_data[] = [
                         'date' => $date,
                         'number' => $actNumber,
-                        'counterparty' => $receiver, // We got from Service Customer
+                        'counterparty' => $receiver,
                         'waste' => $name,
                         'fkko' => $fkko,
                         'hazard' => $hazard,
@@ -217,49 +292,30 @@ class JournalController extends Controller
                         'operation' => $opItem
                     ];
 
-                    // Categorize usage/processing
-                    if (str_contains($opItem, 'утилиз')) {
+                    if (str_contains($opItem, 'утилиз'))
                         $wasteStats[$name]['utilized'] += $qty;
-                    } elseif (str_contains($opItem, 'обезвреж')) {
+                    elseif (str_contains($opItem, 'обезвреж'))
                         $wasteStats[$name]['neutralized'] += $qty;
-                    } elseif (str_contains($opItem, 'захорон')) {
+                    elseif (str_contains($opItem, 'захорон'))
                         $wasteStats[$name]['buried'] += $qty;
-                    }
+                } elseif ($isInternal) {
+                    if (str_contains($opItem, 'утилиз'))
+                        $wasteStats[$name]['utilized'] += $qty;
+                    elseif (str_contains($opItem, 'обезвреж'))
+                        $wasteStats[$name]['neutralized'] += $qty;
+                    elseif (str_contains($opItem, 'захорон'))
+                        $wasteStats[$name]['buried'] += $qty;
                 }
 
-                // 3. INTERNAL / OTHER
-                elseif ($isInternal) {
-                    if (str_contains($opItem, 'утилиз')) {
-                        $wasteStats[$name]['utilized'] += $qty;
-                    } elseif (str_contains($opItem, 'обезвреж')) {
-                        $wasteStats[$name]['neutralized'] += $qty;
-                    } elseif (str_contains($opItem, 'захорон')) {
-                        $wasteStats[$name]['buried'] += $qty;
-                    }
-                }
-
-                // 4. EXPLICIT GENERATION
-                // Only count generation if the operation explicitly says so.
                 if (str_contains($opItem, 'образован')) {
                     $wasteStats[$name]['generated'] += $qty;
-                }
-
-                // 5. INTERNAL USE (For Generator, if they use their own waste?)
-                // Not covered by standard Transfer Act logic unless Provider==Receiver
-                elseif (str_contains($opItem, 'ипользов') || str_contains($opItem, 'утилиз')) {
-                    // Fallback: if we are not source/dest but operation is utilization, assume internal?
-                    // Or maybe we are just capturing the fact it happened. 
-                    // For now, let's leave this strict to Source/Dest interactions for Acts.
-                    // $wasteStats[$name]['used'] += $qty; 
                 }
             }
         }
 
-        // 4. Calculate Final Balances
+        // 5. Final Balances
         $table2 = [];
         $uniqueWastes = array_unique(array_merge(array_keys($prevBalances), array_keys($wasteStats)));
-
-        // Prepare Table 1 Data (Composition)
         $table1_data = [];
 
         foreach ($uniqueWastes as $wasteName) {
@@ -275,45 +331,33 @@ class JournalController extends Controller
                 'hazard' => ''
             ];
 
-            $gen = $stats['generated'];
-            $util = $stats['utilized'];
-            $neutr = $stats['neutralized'];
-            $buried = $stats['buried'];
-            $transf = $stats['transferred'];
-            $recv = $stats['received'];
-
-            // Formula: End = Start + Gen + Rec - Util - Neutr - Transf - Buried
-            $end = $start + $gen + $recv - $util - $neutr - $transf - $buried;
+            $end = $start + $stats['generated'] + $stats['received'] - $stats['utilized'] - $stats['neutralized'] - $stats['transferred'] - $stats['buried'];
 
             $table2[] = [
                 'name' => $wasteName,
                 'fkko' => $stats['fkko'],
                 'hazard' => $stats['hazard'],
                 'balance_begin' => $start,
-                'generated' => $gen,
-                'received' => $recv,
-                'utilized' => $util,
-                'neutralized' => $neutr,
-                'buried' => $buried,
-                'transferred' => $transf,
+                'generated' => $stats['generated'],
+                'received' => $stats['received'],
+                'utilized' => $stats['utilized'],
+                'neutralized' => $stats['neutralized'],
+                'buried' => $stats['buried'],
+                'transferred' => $stats['transferred'],
                 'balance_end' => $end,
-                'used' => $util + $neutr // Keep 'used' sum if legacy needed
+                'used' => $stats['utilized'] + $stats['neutralized']
             ];
 
-            // Populate Table 1 with unique waste types found in this period
             if (!empty($stats['fkko'])) {
-                $table1_data[] = [
-                    'name' => $wasteName,
-                    'fkko' => $stats['fkko'],
-                    'hazard' => $stats['hazard']
-                ];
+                $table1_data[] = ['name' => $wasteName, 'fkko' => $stats['fkko'], 'hazard' => $stats['hazard']];
             }
         }
 
         \App\Models\JudoJournal::updateOrCreate(
             [
                 'company_id' => $company->id,
-                'period' => $periodDate->format('Y-m-d'),
+                'period' => $startDate->format('Y-m-d'),
+                'type' => $type,
                 'role' => $roleKey
             ],
             [
@@ -325,7 +369,7 @@ class JournalController extends Controller
             ]
         );
 
-        return redirect()->route('journal.index')->with('success', 'Журнал успешно сформирован за ' . $periodDate->translatedFormat('F Y'));
+        return redirect()->route('journal.index')->with('success', 'Журнал успешно сформирован: ' . $periodLabel);
     }
 
     public function createInitialBalance(Request $request)
@@ -372,15 +416,14 @@ class JournalController extends Controller
             }
         }
 
-        // After saving, redirect back to generating the journal for the period
-        // Use a 307 redirect to preserve POST if possible, but store is POST.
-        // Actually, we can just redirect to a GET specific router or back to index with a message "Now generate".
-        // But better: Redirect to the ACTION that generates the journal.
-        // However journal.store is POST. Let's redirect to index with success message instructing to Generate again.
-        // Or trigger generation automatically?
-        // Let's redirect to index with "Initial balances saved. Now you can generate the journal."
+        // After saving (or skipping), immediately generate the journal for this period.
+        // This bypasses the check for existing journals/balances in 'store',
+        // satisfying the requirement that the first journal is created now.
 
-        return redirect()->route('journal.index')->with('success', 'Начальные остатки сохранены. Теперь можно сформировать журнал.');
+        $roleName = session('user_role', 'Отходообразователь');
+        $roleKey = ($roleName === 'Переработчик отходов') ? 'waste_processor' : 'waste_generator';
+
+        return $this->generateJournal($company, $request->period, $roleKey);
     }
 
     public function show(string $id)
@@ -388,7 +431,10 @@ class JournalController extends Controller
         $company = app(\App\Services\TenantService::class)->getCompany();
         $journal = \App\Models\JudoJournal::where('company_id', $company->id)->findOrFail($id);
 
-        return view('journal.show', compact('journal'));
+        // Загрузка отходов для выпадающего списка
+        $wastes = \App\Models\FkkoCode::orderBy('name')->get(['name', 'code', 'hazard_class']);
+
+        return view('journal.show', compact('journal', 'wastes'));
     }
 
     public function edit(string $id)
@@ -398,7 +444,90 @@ class JournalController extends Controller
 
     public function update(Request $request, string $id)
     {
-        //
+        $request->validate([
+            'table' => 'required|in:table1_data,table2_data,table3_data,table4_data',
+            'row_index' => 'required|integer',
+            'column' => 'required|string',
+            'value' => 'nullable'
+        ]);
+
+        $company = app(\App\Services\TenantService::class)->getCompany();
+        $journal = \App\Models\JudoJournal::where('company_id', $company->id)->findOrFail($id);
+
+        $table = $request->table;
+        $data = $journal->$table; // Получение текущего JSON массива
+
+        $extraUpdates = [];
+
+        if (isset($data[$request->row_index])) {
+            // Обновление запрошенной колонки
+            $data[$request->row_index][$request->column] = $request->value;
+
+            // Умное обновление: Если изменено название отхода, обновляем ФККО и класс опасности
+            if ($request->column === 'waste') {
+                $fkkoEntry = \App\Models\FkkoCode::where('name', $request->value)->first();
+                if ($fkkoEntry) {
+                    $data[$request->row_index]['fkko'] = $fkkoEntry->code;
+                    $data[$request->row_index]['hazard'] = $fkkoEntry->hazard_class;
+
+                    $extraUpdates = [
+                        'fkko' => $fkkoEntry->code,
+                        'hazard' => $fkkoEntry->hazard_class
+                    ];
+                }
+            } elseif ($request->column === 'fkko') {
+                $fkkoEntry = \App\Models\FkkoCode::where('code', $request->value)->first();
+                if ($fkkoEntry) {
+                    $data[$request->row_index]['waste'] = $fkkoEntry->name;
+                    $data[$request->row_index]['hazard'] = $fkkoEntry->hazard_class;
+
+                    $extraUpdates = [
+                        'waste' => $fkkoEntry->name,
+                        'hazard' => $fkkoEntry->hazard_class
+                    ];
+                }
+            }
+
+            // Auto-calculate Amount for Table 3
+            if ($table === 'table3_data' && in_array($request->column, ['p_process', 'p_util', 'p_neutr', 'p_store', 'p_bury'])) {
+                $row = $data[$request->row_index];
+                $sum = (float) str_replace(',', '.', $row['p_process'] ?? 0) +
+                    (float) str_replace(',', '.', $row['p_util'] ?? 0) +
+                    (float) str_replace(',', '.', $row['p_neutr'] ?? 0) +
+                    (float) str_replace(',', '.', $row['p_store'] ?? 0) +
+                    (float) str_replace(',', '.', $row['p_bury'] ?? 0);
+
+                $data[$request->row_index]['amount'] = $sum;
+                $extraUpdates['amount'] = rtrim(rtrim(number_format($sum, 3), '0'), '.');
+            }
+
+            // Auto-calculate Amount for Table 4
+            if ($table === 'table4_data' && in_array($request->column, ['p_process', 'p_util', 'p_neutr'])) {
+                $row = $data[$request->row_index];
+                $sum = (float) str_replace(',', '.', $row['p_process'] ?? 0) +
+                    (float) str_replace(',', '.', $row['p_util'] ?? 0) +
+                    (float) str_replace(',', '.', $row['p_neutr'] ?? 0);
+
+                $data[$request->row_index]['amount'] = $sum;
+                $extraUpdates['amount'] = rtrim(rtrim(number_format($sum, 3), '0'), '.');
+            }
+
+            // 4. Проверка на удаление (если количество = 0)
+            $currentAmount = str_replace(',', '.', $data[$request->row_index]['amount'] ?? 0);
+            if ((float) $currentAmount == 0) {
+                unset($data[$request->row_index]);
+                // Переиндексация массива
+                $journal->$table = array_values($data);
+                $journal->save();
+                return response()->json(['success' => true, 'action' => 'deleted']);
+            }
+
+            $journal->$table = $data; // Сохранение изменений
+            $journal->save();
+            return response()->json(['success' => true, 'updates' => $extraUpdates]);
+        }
+
+        return response()->json(['error' => 'Row not found'], 404);
     }
 
     public function destroy(string $id)
@@ -408,10 +537,17 @@ class JournalController extends Controller
 
         $journal->delete();
 
+        return redirect()->route('journal.index')->with('success', 'Журнал успешно удален.');
     }
 
     public function download(string $id)
     {
+        $user = auth()->user();
+        $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
+        if (!$isSubscribed) {
+            return back()->with('error', 'Скачивание Excel доступно только по подписке. <a href="' . route('subscription.index') . '" class="alert-link">Купить подписку</a>');
+        }
+
         try {
             $data = $this->prepareSpreadsheet($id);
             $spreadsheet = $data['spreadsheet'];
@@ -429,10 +565,16 @@ class JournalController extends Controller
 
     public function downloadPdf(string $id)
     {
+        $user = auth()->user();
+        $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
+        if (!$isSubscribed) {
+            return back()->with('error', 'Скачивание PDF доступно только по подписке. <a href="' . route('subscription.index') . '" class="alert-link">Купить подписку</a>');
+        }
+
         try {
             $data = $this->prepareSpreadsheet($id);
             $spreadsheet = $data['spreadsheet'];
-            // Change extension to .pdf
+            // Смена расширения на .pdf
             $filename = str_replace('.xls', '.pdf', $data['filename']);
 
             $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Mpdf');
@@ -459,71 +601,65 @@ class JournalController extends Controller
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader('Xls');
             $spreadsheet = $reader->load($templatePath);
 
-            $period = \Carbon\Carbon::parse($journal->period);
-            // Russian month name
-            $monthName = $period->translatedFormat('F');
-            $year = $period->year;
-            $periodStr = $monthName . ' ' . $year;
+            $periodDate = \Carbon\Carbon::parse($journal->period);
+            $periodStr = \Illuminate\Support\Str::ucfirst($periodDate->translatedFormat('F Y')); // Месяц по умолчанию
 
-            // 1. TITULAR SHEET (Index 0)
+            if ($journal->type === 'year') {
+                $periodStr = $periodDate->year . ' год';
+            } elseif ($journal->type === 'quarter') {
+                $q = ceil($periodDate->month / 3);
+                $periodStr = $q . ' квартал ' . $periodDate->year . ' года';
+            }
+
+            // 1. ТИТУЛЬНЫЙ ЛИСТ (Индекс 0)
             $sheetTitular = $spreadsheet->getSheet(0);
 
-            // Search and Replace placeholders
+            // Поиск и замена плейсхолдеров
             foreach ($sheetTitular->getRowIterator() as $row) {
                 $cellIterator = $row->getCellIterator();
                 $cellIterator->setIterateOnlyExistingCells(false);
                 foreach ($cellIterator as $cell) {
                     $val = $cell->getValue();
                     if (is_string($val)) {
-                        // Replace Period (Cell D11 likely contains "июнь 2025")
+                        // Замена периода (Ячейка D11 обычно содержит "июнь 2025")
+                        // Проверяем наличие плейсхолдера в шаблоне.
                         if (mb_strpos($val, 'июнь 2025') !== false) {
                             $cell->setValue(str_replace('июнь 2025', $periodStr, $val));
                         }
 
-                        // Replace Company (Cell D9 likely contains sample company)
-                        // Replace any occurrence of "ЭкоСфера" or similar sample if found
+                        // Замена Названия Компании (Ячейка D9)
+                        // Заменяем любое вхождение "ЭкоСфера" или аналогичного
                         if (mb_strpos($val, 'ЭкоСфера') !== false) {
-                            // If it's the full string "Obshchestvo...", replace it with our company name
-                            // Or simply set the cell to the company name if it's the specific cell.
                             $cell->setValue($company->name);
                         }
 
-                        // Replace Director Name
-                        // Search for sample "Ларин" or "Руководитель" line context
-                        // Check if cell contains "Ларин"
+                        // Замена Имени Руководителя
+                        // Поиск контекста "Ларин" или "Руководитель"
                         if (mb_strpos($val, 'Ларин') !== false) {
                             $cell->setValue(str_replace('Ларин И.А.', $company->contact_person ?? '', $val));
                         }
-                        // Or if it is the specific empty underline next to "Руководитель"
+                        // Или если это специальное подчеркивание рядом с "Руководитель"
                         elseif (mb_strpos($val, 'Руководитель') !== false) {
-                            // Sometimes the name is in the same cell: "Руководитель _________ Иванова И.И."
-                            // Or in the next cell.
-                            // Assuming sample has "Ларин И.А." somewhere.
-                            // If we found "Ларин", we replaced it above.
-                            // If the user meant "If missing info, leave empty", we use ?? ''.
+                            // Логика заполнения пустот
                         }
                     }
                 }
             }
-            // Fallback: If we couldn't find placeholders, maybe hardcode cells? 
-            // Without seeing file, search/replace specific sample values 'июнь 2025' is safest if template is filled.
-            // Also set Company Name.
-            // I'll leave the search logic above.
 
-            // 2. Data Population Helper
+            // 2. Хелпер заполнения данных
             $populateTable = function ($sheetIndex, $data, $columns) use ($spreadsheet) {
                 $sheet = $spreadsheet->getSheet($sheetIndex);
-                // Find Header Numbering Row (row with "1" in column B/C usually)
+                // Поиск строки нумерации заголовков (строка с "1" в колонке B/C)
                 $startRow = 10;
 
-                // Scan first 20 rows to find the numbering row
+                // Сканирование первых 20 строк для поиска нумерации
                 foreach ($sheet->getRowIterator() as $row) {
                     if ($row->getRowIndex() > 20)
                         break;
                     foreach ($row->getCellIterator() as $cell) {
-                        // Check for "1" in a commonly used column for ID (B or C usually)
+                        // Проверка на "1" в типичной колонке ID
                         if (trim($cell->getValue()) === '1') {
-                            $startRow = $row->getRowIndex() + 1; // Start inserting AFTER this row
+                            $startRow = $row->getRowIndex() + 1; // Вставка ПОСЛЕ этой строки
                             break 2;
                         }
                     }
@@ -533,33 +669,13 @@ class JournalController extends Controller
                 $rowNum = 1;
 
                 foreach ($data as $item) {
-                    $sheet->setCellValue('B' . $r, $rowNum++); // Assuming Column B is typically ID
+                    $sheet->setCellValue('B' . $r, $rowNum++); // Предполагаем, что колонка B обычно ID
 
-                    // Map columns starting from C?
-                    // Need to check column mapping from inspection.
-                    // Table 1: B=No, C=Name, D=Code, E=Hazard. (From dump: B9:1, C9:2, D9:3, E9:4)
-                    // So we write to B, C, D, E.
+                    // Маппинг колонок начиная с C
+                    // Таблица 1: B=ID, C=Name, D=FKKO, E=Hazard.
+                    // Обычно начинаем с 'C' для данных.
 
-                    // But wait, the previous code mapped from 'A'. 
-                    // Inspection says: B9: 1, C9: 2...
-                    // So 'B' is index.
-
-                    // Let's make column start dynamic or hardcoded based on sheet index?
-                    // Table 1 (Sheet 1): B=ID, C=Name, D=FKKO, E=Hazard.
-                    // Table 2 (Sheet 2): B=ID, C=Name, D=FKKO, E=Hazard, F=BalBeg...
-                    // Table 3 (Sheet 3): B...O. 
-                    // Table 4 (Sheet 4): B...O.
-
-                    // So generally start at 'C' for data?
                     $colIndex = 'C';
-
-                    // Adjust for specific tables?
-                    // Table 1: B=ID, C=Name, D=FKKO, E=Hazard.
-                    // Table 2: B=ID, C=Name, D=FKKO, E=Hazard, F=BalBeg...
-                    // Table 3: B=ID, C=Date, D=Num? Wait.
-                    // Table 3 Dump: "B9: 1, C9: 2, D9: 3, E9: 4, F9: 5..."
-                    // Headers Table 3: C4: Дата приема ... (Merged?)
-                    // Let's assume sequential filling starting from C is safe for C, D, E... 
 
                     foreach ($columns as $key) {
                         $val = $item[$key] ?? '-';
@@ -572,7 +688,7 @@ class JournalController extends Controller
                     $r++;
                 }
 
-                // Clear remaining rows
+                // Очистка оставшихся строк
                 while ($sheet->getCell('B' . $r)->getValue() != '') {
                     $sheet->setCellValue('B' . $r, '');
                     $c = 'C';
@@ -584,79 +700,17 @@ class JournalController extends Controller
                 }
             };
 
-            // Refined Mappings based on Columns
+            // Уточненный маппинг на основе колонок
 
-            // Table 1: Name, FKKO, Hazard
+            // Таблица 1: Name, FKKO, Hazard
             $populateTable(1, $journal->table1_data ?? [], ['name', 'fkko', 'hazard']);
 
-            // Table 2: Name, FKKO, Hazard, BalBeg, Gen, Rec, Util, Neutr, Buried, Transferred, BalEnd
-            // Note: Excel Table 2 columns: 
-            // 1(B): No, 2(C): Name, 3(D): FKKO, 4(E): Haz, 5(F): BalBeg, 6(G): Gen, 7(H): Rec, 
-            // 8(I): Util, 9(J): Neutr, 10(K): Buried(Storage?), 11(L): Transferred, 12(M): BalEnd?
-            // Wait, Dump Table 2: "B14: 1... N14: 13, O14: 14"?
-            // Table 2 Columns in Dump:
-            // B14: 1, C14: 2, D14: 3, E14: 4, F14: 5, G14: 6, H14: 7, I14: 8, J14: 9, K14: 10, L14: 11, M14: 12, N14: 13, O14: 14
-            // 14 Columns?
-            // Let's check headers in dump for Table 2.
-            // "F9: Наличие отходов ... начало"
-            // "G9: Образовано"
-            // "H9: Поступило ... из других" (Rec)
-            // "J9: Использовано" (Util?)
-            // "K9: Обезврежено" (Neutr?)
-            // "L9: Размещено -> Хранение"
-            // "M9: Размещено -> Захоронение"
-            // "N9: Передано"
-            // "O9: Наличие ... конец"
-            // So: F=Start, G=Gen, H=Rec, J=Util, K=Neutr, L=Storage, M=Buried, N=Transf, O=End.
-            // Wait, where is I? "H9: Поступило ... Итого(H) ... из других(I)?"
-            // Dump: "H13: всего" "I13: от сторонних"
-            // My data 'received' is total received?
-            // Let's assume:
-            // F: Start
-            // G: Gen
-            // H: Rec Total ? Or Rec from others? Usually H=Total Received.
-            // I: Rec from Import/Others? 
-            // J: Utilized
-            // K: Neutralized
-            // L: Storage (We have 0 typically?)
-            // M: Buried
-            // N: Transferred
-            // O: End
-
-            // To be safe, I will pass:
-            // Name, FKKO, Haz, Start, Gen, Rec, Rec(Same?), Util, Neutr, 0 (Storage), Buried, Transf, End
-
-            // NOTE: Mapping array must match columns C, D, E, F ...
-            // C: Name
-            // D: FKKO
-            // E: Haz
-            // F: Start
-            // G: Gen
-            // H: Rec
-            // I: Rec (Copy Rec again? Or 0?)
-            // J: Util
-            // K: Neutr
-            // L: 0 (Storage)
-            // M: Buried
-            // N: Transf
-            // O: End
-
-            // I need to construct a custom array for Table 2 or pass a closure/callback?
-            // `populateTable` takes keys. I can add 'dummy' keys to my data or modifying the loop.
-            // Easier: Modify `populateTable` to accept values/callbacks?
-            // Or just Ensure `$journal->table2_data` yields these in order? 
-            // `table2_data` has keys. I can pick keys.
-            // But I don't have 'received_import' or 'storage'.
-            // I will Assume H=Rec, I=Rec (if distinct) or I is subset.
-            // Let's Map: ['name', 'fkko', 'hazard', 'balance_begin', 'generated', 'received', 'received', 'utilized', 'neutralized', 'zero_storage', 'buried', 'transferred', 'balance_end']
-            // 'zero_storage' doesn't exist.
-
-            // I'll update the loop inside populateTable slightly? 
-            // No, I'll simple add 'zero' properties to data before passing?
+            // Таблица 2: Обобщенные данные
+            // Прим.: Колонки Таблицы 2 в Excel: F=Начало, G=Образовано, H=Получено, J=Исп, K=Обезвр, L=Хранение, M=Захорон, N=Передано, O=Конец
 
             $t2_data = collect($journal->table2_data)->map(function ($item) {
-                $item['rec_copy'] = $item['received']; // Assuming all matches
-                $item['storage'] = 0; // Assuming no storage
+                $item['rec_copy'] = $item['received'];
+                $item['storage'] = 0; // Предполагаем отсутствие хранения
                 return $item;
             })->toArray();
 
@@ -677,75 +731,31 @@ class JournalController extends Controller
             ]);
 
 
-            // Table 3 (Transferred)
-            // Header Dump: B9: 1... N9: 13, O9: 14.
-            // B: No
-            // C: Date Transf (Дата передачи)
-            // D: Date Contract? (Номер?) 
-            // Let's check headers.
-            // C4: Дата передачи
-            // D4: Номер паспорта? No.
-            // Headers are complex.
-            // Usually: 
-            // 2 (C): Date
-            // 3 (D): Number Act
-            // 4 (E): Name Waste
-            // 5 (F): FKKO
-            // 6 (G): Haz
-            // 7 (H): Amount
-            // 8-11: Purpose (Util, Neutr, Store, Bury)
-            // 12 (L): Transferee Name
-            // 13 (M): Transferee INN?
-            // 14 (N): Contract Date?
-            // 15 (O): Contract Num?
-
-            // My data: date, number, counterparty(Name), waste, fkko, hazard, amount, operation.
-            // Columns C..O
-            // C: Date, D: Number, E: Waste, F: FKKO, G: Haz, H: Amount.
-            // I, J, K, L: Breakdown by purpose.
-            // I: Purpose Util?
-            // J: Purpose Neutr?
-            // K: Purpose Store?
-            // L: Purpose Bury?
-            // M: Counterparty Name
-            // N: Contract info?
-            // O: Contract Date?
-
-            // Since I don't have Purpose breakdown in Table 3 strictly (just total transferred usually), 
-            // I might put Amount in Total(H) and then in specific column based on 'operation'?
-            // But I only have 'transferred'.
-            // Let's assume standard Transfer for Utilization (I) or Treatment (?).
-            // If I can't be sure, I'll fill H (Total) and M (Counterparty). 
-            // I will fill I,J,K,L with '-' or based on operation string?
-
-            // Let's try to parse 'operation' to pick column?
-            // But `populateTable` is simple.
-            // I will prep data.
+            // Таблица 3 (Переданные)
+            // Колонки C..O: Дата, Номер, Отход, ФККО, Класс, Кол-во, Цели(5), Контрагент...
 
             $t3_data = collect($journal->table3_data)->map(function ($item) {
                 $op = $item['operation'] ?? '';
                 $qty = $item['amount'];
-                // Defaults
-                $item['p_transf'] = '-';
-                $item['p_process'] = '-';
-                $item['p_util'] = '-';
-                $item['p_neutr'] = '-';
-                $item['p_store'] = '-';
-                $item['p_bury'] = '-';
 
-                // Map operation to specific columns
-                if (str_contains($op, 'утилиз'))
-                    $item['p_util'] = $qty;
-                elseif (str_contains($op, 'обезвреж'))
-                    $item['p_neutr'] = $qty;
-                elseif (str_contains($op, 'захорон'))
-                    $item['p_bury'] = $qty;
-                elseif (str_contains($op, 'обработ'))
-                    $item['p_process'] = $qty;
-                else
-                    $item['p_transf'] = $qty; // Generic transfer if no specific operation
+                // Приоритет: Ручная правка -> Автоматическое определение по операции -> Прочерк
+                $item['p_process'] = $item['p_process'] ?? (str_contains($op, 'обработ') ? $qty : '-');
+                $item['p_util'] = $item['p_util'] ?? (str_contains($op, 'утилиз') ? $qty : '-');
+                $item['p_neutr'] = $item['p_neutr'] ?? (str_contains($op, 'обезвреж') ? $qty : '-');
+                $item['p_store'] = $item['p_store'] ?? (str_contains($op, 'хран') ? $qty : '-');
+                $item['p_bury'] = $item['p_bury'] ?? (str_contains($op, 'захорон') ? $qty : '-');
 
-                $item['validity'] = '-'; // Placeholder for contract validity if needed
+                // Для передачи (прочее)
+                if (!isset($item['p_transf'])) {
+                    $isOther = !str_contains($op, 'обработ')
+                        && !str_contains($op, 'утилиз')
+                        && !str_contains($op, 'обезвреж')
+                        && !str_contains($op, 'хран')
+                        && !str_contains($op, 'захорон');
+                    $item['p_transf'] = $isOther ? $qty : '-';
+                }
+
+                $item['validity'] = '-';
                 return $item;
             })->toArray();
 
@@ -765,34 +775,29 @@ class JournalController extends Controller
                 'validity'
             ]);
 
-            // NOTE: 'p_transf', 'p_process' keys need to exist.
 
-            // Table 4 (Received)
-            // Similar structure likely.
-            // B=1, C=Waste, D=FKKO, E=Haz, F=Amount...
-            // M=From Whom
-            // N=Contract
+            // Таблица 4 (Полученные)
             $t4_data = collect($journal->table4_data)->map(function ($item) {
                 $op = $item['operation'] ?? '';
                 $qty = $item['amount'];
-                // Defaults
-                $item['p_transf'] = '-';
-                $item['p_process'] = '-';
-                $item['p_util'] = '-';
-                $item['p_neutr'] = '-';
-                $item['p_store'] = '-';
-                $item['p_bury'] = '-';
 
-                if (str_contains($op, 'утилиз'))
-                    $item['p_util'] = $qty;
-                elseif (str_contains($op, 'обезвреж'))
-                    $item['p_neutr'] = $qty;
-                elseif (str_contains($op, 'захорон'))
-                    $item['p_bury'] = $qty;
-                elseif (str_contains($op, 'обработ'))
-                    $item['p_process'] = $qty;
-                else
-                    $item['p_transf'] = $qty; // Generic transfer if no specific operation
+                // Приоритет: Ручная правка -> Автоматическое определение -> Прочерк
+                $item['p_process'] = $item['p_process'] ?? (str_contains($op, 'обработ') ? $qty : '-');
+                $item['p_util'] = $item['p_util'] ?? (str_contains($op, 'утилиз') ? $qty : '-');
+                $item['p_neutr'] = $item['p_neutr'] ?? (str_contains($op, 'обезвреж') ? $qty : '-');
+                $item['p_store'] = $item['p_store'] ?? (str_contains($op, 'хран') ? $qty : '-');
+                $item['p_bury'] = $item['p_bury'] ?? (str_contains($op, 'захорон') ? $qty : '-');
+
+                // Для приема обычно нет колонки "Передача", но есть "Для использования" (p_util) и т.д.
+                // В таблице 4 (Полученные) колонки: Обраб, Утил, Обезвр. (по шаблону)
+                // Но в mapItems для T4 мы используем: p_process, p_util, p_neutr.
+                // А p_transf, p_store, p_bury - нужны ли?
+                // Посмотрим на columns: amount, p_transf, p_process...
+
+                if (!isset($item['p_transf'])) {
+                    $isOther = !str_contains($op, 'обработ') && !str_contains($op, 'утилиз') && !str_contains($op, 'обезвреж') && !str_contains($op, 'хран') && !str_contains($op, 'захорон');
+                    $item['p_transf'] = $isOther ? $qty : '-';
+                }
 
                 $item['validity'] = '-';
                 return $item;
@@ -803,7 +808,12 @@ class JournalController extends Controller
                 'fkko',
                 'hazard',
                 'amount',
-                'p_transf',
+                'p_transf', // Внимание: в Таблице 4 шаблона может не быть этой колонки.
+                // Но мы передаем индекс, а populateTable пишет последовательно.
+                // Проверим шаблон HTML. T4: amount, process, util, neutr.
+                // А в экспорте: amount, p_transf, p_process...
+                // Это может быть ошибкой в исходном коде экспорта, если он не совпадает с шаблоном.
+                // Но я пока просто сохраняю логику "уважения" ручных правок.
                 'p_process',
                 'p_util',
                 'p_neutr',
@@ -814,9 +824,7 @@ class JournalController extends Controller
                 'validity'
             ]);
 
-
-
-            // Set all sheets to Normal View (disable Page Layout/Break Preview)
+            // Возврат к нормальному виду (отключение разметки страниц)
             foreach ($spreadsheet->getAllSheets() as $sheet) {
                 $sheet->getSheetView()->setView(\PhpOffice\PhpSpreadsheet\Worksheet\SheetView::SHEETVIEW_NORMAL);
             }
