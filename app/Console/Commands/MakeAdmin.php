@@ -12,31 +12,31 @@ class MakeAdmin extends Command
      *
      * @var string
      */
-    protected $signature = 'make:admin {phone}';
+    protected $signature = 'make:admin {email}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Grant admin access to a user by phone number';
+    protected $description = 'Grant admin access to a user by email';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        $phone = $this->argument('phone');
-        $user = User::where('phone', $phone)->first();
+        $email = $this->argument('email');
+        $user = User::where('email', $email)->first();
 
         if (!$user) {
-            $this->error("User with phone {$phone} not found.");
+            $this->error("User with email {$email} not found.");
             return;
         }
 
         $user->is_admin = true;
         $user->save();
 
-        $this->info("User {$user->phone} is now an admin.");
+        $this->info("User {$user->email} is now an admin.");
     }
 }
