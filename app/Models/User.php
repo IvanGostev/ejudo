@@ -21,6 +21,7 @@ class User extends Authenticatable implements FilamentUser, HasName
      * @var list<string>
      */
     protected $fillable = [
+        'email',
         'phone',
         'phone_verified',
         'pin_code',

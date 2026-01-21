@@ -11,13 +11,13 @@
             <form id="auth-form">
                 @csrf
                 <div class="mb-3">
-                    <label for="phone" class="form-label">Номер телефона</label>
-                    <input type="text" class="form-control" id="phone" name="phone" placeholder="+7 (999) 000-00-00"
+                    <label for="email" class="form-label">Email адрес</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com"
                         required>
                 </div>
 
                 <div class="mb-3 d-none" id="code-group">
-                    <label for="code" class="form-label">Код из СМС</label>
+                    <label for="code" class="form-label">Код из письма</label>
                     <input type="text" class="form-control" id="code" name="code" placeholder="1234" maxlength="4">
                 </div>
 
@@ -41,8 +41,8 @@
             <div>
                 <h6 class="fw-bold text-dark mb-2"><i class="bi bi-headset me-1"></i>Поддержка</h6>
                 <p class="small text-muted mb-0">
-                    <a href="mailto:support@ejudo.ru" class="text-decoration-none text-muted"><i
-                            class="bi bi-envelope me-1"></i>support@ejudo.ru</a><br>
+                    <a href="mailto:support@ejydo.ru" class="text-decoration-none text-muted"><i
+                            class="bi bi-envelope me-1"></i>support@ejydo.ru</a><br>
                     <a href="tel:+79991234567" class="text-decoration-none text-muted"><i
                             class="bi bi-telephone me-1"></i>+7 (999) 123-45-67</a>
                 </p>
@@ -90,30 +90,28 @@
             $('#auth-form').on('submit', function (e) {
                 e.preventDefault();
 
-                const phone = $('#phone').val();
+                const email = $('#email').val();
                 const code = $('#code').val();
 
                 if (step === 'send') {
-                    if (phone.length < 10) {
-                        alert('Введите корректный номер телефона');
+                    if (!email) {
+                        alert('Введите Email');
                         return;
                     }
 
                     $.post('{{ route('auth.send-code') }}', {
-                        phone: phone
+                        email: email
                     })
                         .done(function (res) {
                             step = 'verify';
                             $('#code-group').removeClass('d-none');
                             $('#submit-btn').text('Войти');
-                            // $('#phone').prop('readonly', true);
-                            if (res.debug_code) {
-                                alert('DEBUG CODE: ' + res.debug_code);
-                            }
-                            $('#alert-container').html('<div class="alert alert-success">Код отправлен!</div>');
+                            // $('#email').prop('readonly', true);
+                            // Code sent successfully
+                            $('#alert-container').html('<div class="alert alert-success">Код отправлен на почту!</div>');
                         })
                         .fail(function (err) {
-                            const msg = err.responseJSON?.message || 'Ошибка отправки СМС';
+                            const msg = err.responseJSON?.message || 'Ошибка отправки кода';
                             $('#alert-container').html('<div class="alert alert-danger">' + msg + '</div>');
                         });
                 } else {
@@ -123,16 +121,14 @@
                     }
 
                     $.post('{{ route('auth.verify-code') }}', {
-                        phone: phone,
+                        email: email,
                         code: code
                     })
                         .done(function (res) {
                             if (res.redirect_url) {
                                 window.location.href = res.redirect_url;
-                            } else if (res.company) {
-                                window.location.href = '{{ route('dashboard') }}';
                             } else {
-                                window.location.href = '{{ route('company.create') }}';
+                                window.location.href = '{{ route('dashboard') }}';
                             }
                         })
                         .fail(function (err) {

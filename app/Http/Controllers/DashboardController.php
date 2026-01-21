@@ -13,7 +13,13 @@ class DashboardController extends Controller
 
         // Handle Period Selection
         // Default to current month if not set, unless 'all' is explicitly requested or passed
-        $selectedPeriod = $request->input('period', now()->format('Y-m'));
+        $selectedPeriod = $request->input('period');
+
+        if (!$selectedPeriod) {
+            $selectedPeriod = session('dashboard_period', 'all');
+        } else {
+            session(['dashboard_period' => $selectedPeriod]);
+        }
         $showAllTime = $selectedPeriod === 'all';
 
         // Initialize empty collections

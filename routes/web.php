@@ -60,3 +60,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/company/create', [AuthController::class, 'showCompanyCreate'])->name('company.create');
     Route::post('/company', [AuthController::class, 'registerCompany'])->name('company.store');
 });
+
+// Dynamic Pages (Catch-all for pages like /about, /offer)
+Route::get('/{slug}', [\App\Http\Controllers\PageController::class, 'show'])->name('page.show');

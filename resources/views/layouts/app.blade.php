@@ -125,7 +125,7 @@
     <!-- Top Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-judo-dark sticky-top">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{{ route('dashboard') }}">eJudo</a>
+            <a class="navbar-brand fw-bold" href="{{ route('dashboard') }}">eJydo</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNavbar">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -161,60 +161,57 @@
                     </li>
                 </ul>
                 <div class="d-flex text-white align-items-center">
-                    <!-- Role Selector -->
+                    <!-- Company Selector -->
                     <div class="dropdown me-3">
-                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button"
-                            data-bs-toggle="dropdown">
-                            {{ session('user_role', 'Отходообразователь') }}
+                        @php
+                            $user = auth()->user();
+                            $allCompanies = $user->companies;
+                            $currentCompany = app(\App\Services\TenantService::class)->getCompany();
+                        @endphp
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            {{ $currentCompany ? $currentCompany->name : 'Выберите компанию' }}
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#"
-                                    onclick="event.preventDefault(); setRole('Отходообразователь');">Отходообразователь</a>
+                            @if($allCompanies->count() > 0)
+                                @foreach($allCompanies as $comp)
+                                    <li>
+                                        <a class="dropdown-item {{ ($currentCompany && $currentCompany->id === $comp->id) ? 'active' : '' }}"
+                                            href="#"
+                                            onclick="event.preventDefault(); document.getElementById('header-switch-company-{{ $comp->id }}').submit();">
+                                            {{ $comp->name }}
+                                        </a>
+                                        <form id="header-switch-company-{{ $comp->id }}" action="{{ route('companies.switch', $comp->id) }}"
+                                            method="POST" class="d-none">
+                                            @csrf
+                                        </form>
+                                    </li>
+                                @endforeach
+                                <li><hr class="dropdown-divider"></li>
+                            @endif
+                            <li>
+                                <a class="dropdown-item" href="{{ route('companies.create') }}">
+                                    <i class="bi bi-plus-lg me-1"></i>Добавить новую
+                                </a>
                             </li>
-                            <li><a class="dropdown-item" href="#"
-                                    onclick="event.preventDefault(); setRole('Переработчик отходов');">Переработчик
-                                    отходов</a></li>
                         </ul>
-                        <script>
-                            function setRole(role) {
-                                fetch('{{ route('role.set') }}', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                    },
-                                    body: JSON.stringify({ role: role })
-                                })
-                                    .then(response => {
-                                        if (response.ok) {
-                                            location.reload();
-                                        } else {
-                                            alert('Ошибка смены роли');
-                                        }
-                                    })
-                                    .catch(error => console.error('Error:', error));
-                            }
-                        </script>
-
-
-
-
-                        <!-- Logout Button -->
-                        <form action="{{ route('logout') }}" method="POST" class="d-inline ms-3">
-                            @csrf
-                            <button type="submit" class="btn btn-outline-light btn-sm">
-                                <i class="bi bi-box-arrow-right"></i> Выйти
-                            </button>
-                        </form>
                     </div>
+
+                    <!-- Logout Button -->
+                    <form action="{{ route('logout') }}" method="POST" class="d-inline ms-2">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-light btn-sm">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </button>
+                    </form>
                 </div>
     </nav>
 
-    <div class="container-fluid">
-        <div class="row">
+     <div class="container-fluid">
+         <div class="row">
             <!-- Left Sidebar: FKKO Reference -->
             <div class="col-md-3 col-lg-2 sidebar p-3 d-none d-md-block bg-white border-end"
                 style="min-height: calc(100vh - 56px);">
+                <!-- ... sidebar content ... -->
                 <h6 class="text-uppercase text-muted fw-bold mb-3" style="font-size: 0.75rem; letter-spacing: 0.05em;">
                     Справочник ФККО</h6>
 
@@ -273,7 +270,7 @@
                                             } else {
                                                 data.forEach(item => {
                                                     html += `
-                                                                                                <div class="mb-2 border-bottom pb-1" title="${item.name}" 
+                                                                                                <div class="mb-2 border-bottom pb-1" title="${item.name}"
                                                                                                      style="cursor: pointer;"
                                                                                                      onclick="window.location.href='{{ route('acts.manual.create') }}?fkko_code=${item.code}'">
                                                                                                     <div class="fw-bold text-dark">${item.code}</div>
@@ -307,6 +304,46 @@
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light pt-5 pb-2 mt-auto">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h5 class="text-judo-orange mb-3">Компания</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="{{ route('page.show', 'about') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">О сервисе</a></li>
+                        <li class="mb-2"><a href="{{ route('page.show', 'pricing') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Тарифы и цены</a></li>
+                        <li class="mb-2"><a href="{{ route('page.show', 'faq') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Частые вопросы</a></li>
+                        <li class="mb-2"><a href="{{ route('page.show', 'contacts') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Контакты</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h5 class="text-judo-orange mb-3">Документы</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="{{ route('page.show', 'offer') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Публичная оферта</a></li>
+                        <li class="mb-2"><a href="{{ route('page.show', 'privacy') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Политика конфиденциальности</a></li>
+                        <li class="mb-2"><a href="{{ route('page.show', 'agreement') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Согласие на обработку данных</a></li>
+                        <li class="mb-2"><a href="{{ route('page.show', 'terms') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Условия использования</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5 class="text-judo-orange mb-3">Для бизнеса</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="{{ route('page.show', 'refund') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Возврат средств</a></li>
+                        <li class="mb-2"><a href="{{ route('page.show', 'support') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Поддержка</a></li>
+                        <li class="mb-2"><a href="{{ route('page.show', 'templates') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Шаблоны документов</a></li>
+                        <li class="mb-2"><a href="{{ route('page.show', 'partners') }}" class="text-decoration-none text-light opacity-75 hover-opacity-100">Партнерам</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="row mt-4 pt-3 border-top border-secondary">
+                <div class="col-12 text-center text-white small">
+                    <p class="mb-0">© 2026 ejydo.ru. ИП Самофалов Денис Олегович ИНН 272336634478</p>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

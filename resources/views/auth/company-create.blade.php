@@ -4,7 +4,7 @@
     <div class="card auth-card">
         <div class="auth-header">
             <h4>Создание организации</h4>
-            <p class="mb-0 text-white-50">Для продолжения необходимо добавить вашу компанию</p>
+
         </div>
         <div class="card-body p-4">
             <div id="alert-container"></div>

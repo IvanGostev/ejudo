@@ -6,8 +6,8 @@
             <h4 class="mb-4">Профиль пользователя</h4>
             <form>
                 <div class="mb-3">
-                    <label class="form-label">Телефон</label>
-                    <input type="text" class="form-control" value="{{ auth()->user()->phone ?? '' }}" readonly>
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" value="{{ auth()->user()->email }}" readonly>
                 </div>
                 <!-- Add more profile fields -->
             </form>

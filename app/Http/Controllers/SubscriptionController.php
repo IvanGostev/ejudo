@@ -6,7 +6,6 @@ use App\Models\Payment;
 use App\Services\TenantService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use YooKassa\Client;
 use Illuminate\Support\Facades\Log;
 
 class SubscriptionController extends Controller
@@ -32,186 +31,137 @@ class SubscriptionController extends Controller
 
     public function create(Request $request)
     {
-        $company = app(TenantService::class)->getCompany();
-        if (!$company) {
-            return redirect()->back()->with('error', 'Выберите компанию для оплаты.');
+        $wallet = env('YOOMONEY_WALLET');
+
+        if (!$wallet) {
+            return redirect()->back()->with('error', 'Настройки оплаты не сконфигурированы (YOOMONEY).');
         }
-
-        $shopId = env('YOOKASSA_SHOP_ID');
-        $secretKey = env('YOOKASSA_SECRET_KEY');
-
-        if (!$shopId || !$secretKey) {
-            return redirect()->back()->with('error', 'Настройки оплаты не сконфигурированы (YOOKASSA).');
-        }
-
-        $client = new Client();
-        $client->setAuth($shopId, $secretKey);
 
         $amount = 5000.00;
-        $description = 'Уплата подписки eJudo (30 дней) для пользователя ' . auth()->user()->phone;
 
         // Create local payment record
         $localPayment = Payment::create([
             'user_id' => auth()->id(),
-            'company_id' => $company->id,
+            'company_id' => null, // Payment is linked to user, not company
             'amount' => $amount,
             'period_months' => 1,
-            'payment_system' => 'yookassa',
+            'payment_system' => 'yoomoney',
             'status' => 'pending',
         ]);
 
-        try {
-            $response = $client->createPayment(
-                [
-                    'amount' => [
-                        'value' => $amount,
-                        'currency' => 'RUB',
-                    ],
-                    'confirmation' => [
-                        'type' => 'redirect',
-                        'return_url' => route('subscription.callback'),
-                    ],
-                    'capture' => true,
-                    'description' => $description,
-                    'metadata' => [
-                        'company_id' => $company->id,
-                        'payment_id' => $localPayment->id,
-                    ],
-                ],
-                uniqid('', true) // Idempotence Key
-            );
+        $label = $localPayment->id; // Use Payment ID as label for correlation
+        $successUrl = route('subscription.callback');
 
-            // Update local payment with external ID
-            $localPayment->update([
-                'transaction_id' => $response->getId(),
-            ]);
+        // Generate YooMoney QuickPay Form URL (using redirect to form)
+        // Or we can return a view with autosubmit form. 
+        // Redirect with query params is easiest for GET method, but QuickPay works via POST for full params support.
+        // Let's create a temporary hidden form view or redirect with GET params if supported. 
+        // YooMoney QuickPay supports GET.
 
-            // Redirect user to YooKassa
-            return redirect($response->getConfirmation()->getConfirmationUrl());
+        $params = [
+            'receiver' => $wallet,
+            'quickpay-form' => 'shop',
+            'targets' => 'Подписка eJydo ' . auth()->user()->phone,
+            'paymentType' => 'AC', // Bank Card
+            'sum' => $amount,
+            'label' => $label,
+            'successURL' => $successUrl,
+        ];
 
-        } catch (\Exception $e) {
-            Log::error('YooKassa Error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ошибка при создании платежа: ' . $e->getMessage());
-        }
+        $redirectUrl = 'https://yoomoney.ru/quickpay/confirm.xml?' . http_build_query($params);
+
+        return redirect($redirectUrl);
     }
 
     public function callback(Request $request)
     {
-        // Actually, we should capture the payment status. 
-        // YooKassa redirects here. We can check the status from API using our local pending payments or request params if present (usually we just check the latest pending payment or use webhook. But for simplicity let's check the latest pending payment for this user/company or look for a param?).
-        // YooKassa doesn't always send paymentId in GET params on return_url. It depends.
-        // But we can check the most recent pending payment for this company.
+        // User redirected back from YooMoney.
+        // We can't verify payment here without API token. 
+        // We rely on Webhook. 
+        // Just show a "Processing" message.
+        return redirect()->route('subscription.index')->with('info', 'Платёж обрабатывается. Если вы успешно оплатили, подписка активируется в течение нескольких минут.');
+    }
 
-        $company = app(TenantService::class)->getCompany();
-        if (!$company) {
-            return redirect()->route('subscription.index')->with('error', 'Company context lost.');
-        }
-
-        $shopId = env('YOOKASSA_SHOP_ID');
-        $secretKey = env('YOOKASSA_SECRET_KEY');
-        $client = new Client();
-        $client->setAuth($shopId, $secretKey);
-
-        // Find latest pending payment
-        $payment = Payment::where('company_id', $company->id)
-            ->where('status', 'pending')
-            ->whereNotNull('transaction_id')
-            ->latest()
-            ->first();
-
-        if (!$payment) {
-            // Maybe already processed?
-            return redirect()->route('subscription.index');
-        }
+    public function webhook(Request $request)
+    {
+        $secret = env('YOOMONEY_SECRET');
 
         try {
-            $paymentInfo = $client->getPaymentInfo($payment->transaction_id);
+            // YooMoney sends form-data (application/x-www-form-urlencoded)
+            $notification_type = $request->input('notification_type');
+            $operation_id = $request->input('operation_id');
+            $amount = $request->input('amount');
+            $currency = $request->input('currency');
+            $datetime = $request->input('datetime');
+            $sender = $request->input('sender');
+            $codepro = $request->input('codepro');
+            $label = $request->input('label'); // This is our Payment ID
+            $sha1_hash = $request->input('sha1_hash');
 
-            if ($paymentInfo->getStatus() === 'succeeded') {
+            // Validation Logic
+            // sha1_hash = SHA1(notification_type & operation_id & amount & currency & datetime & sender & codepro & notification_secret & label)
+
+            $chain = implode('&', [
+                $notification_type,
+                $operation_id,
+                $amount,
+                $currency,
+                $datetime,
+                $sender,
+                $codepro,
+                $secret,
+                $label
+            ]);
+
+            $calculatedHash = sha1($chain);
+
+            if ($calculatedHash !== $sha1_hash) {
+                Log::warning('YooMoney Webhook Hash Mismatch', ['calculated' => $calculatedHash, 'received' => $sha1_hash]);
+                return response('Hash mismatch', 400);
+            }
+
+            // Find payment by its ID (label)
+            $payment = Payment::find($label);
+            if (!$payment) {
+                Log::error('YooMoney Webhook: Payment not found for label: ' . $label);
+                return response('Payment not found', 200);
+            }
+
+            // Check codepro (if true, payment is protected, we can't accept it yet? Usually false for simple transfers)
+            if ($codepro === 'true' || $codepro === true) {
+                Log::warning('YooMoney Webhook: CodePro is true, ignoring.');
+                return response('CodePro not supported', 200);
+            }
+
+            if ($payment->status !== 'completed') {
                 $payment->update([
                     'status' => 'completed',
+                    'transaction_id' => $operation_id, // Store YooMoney Operation ID
                     'paid_at' => now(),
                 ]);
 
                 // Extend subscription
                 $user = $payment->user;
-                $currentExpires = $user->subscription_ends_at;
-                if ($currentExpires && $currentExpires->isFuture()) {
-                    $newExpires = $currentExpires->copy()->addDays(30);
-                } else {
-                    $newExpires = now()->addDays(30);
-                }
-
-                $user->update(['subscription_ends_at' => $newExpires]);
-
-                return redirect()->route('payment.success');
-            } elseif ($paymentInfo->getStatus() === 'canceled') {
-                $payment->update(['status' => 'failed']);
-                return redirect()->route('subscription.index')->with('error', 'Оплата была отменена.');
-            } else {
-                // still pending
-                return redirect()->route('subscription.index')->with('info', 'Оплата в обработке. Обновите страницу через минуту.');
-            }
-
-        } catch (\Exception $e) {
-            Log::error('YooKassa Check Error: ' . $e->getMessage());
-            return redirect()->route('subscription.index')->with('error', 'Ошибка проверки статуса платежа.');
-        }
-    }
-
-    public function webhook(Request $request)
-    {
-        $shopId = env('YOOKASSA_SHOP_ID');
-        $secretKey = env('YOOKASSA_SECRET_KEY');
-
-        try {
-            $source = file_get_contents('php://input');
-            $requestBody = json_decode($source, true);
-
-            if (!$requestBody) {
-                return response('Invalid Request', 400);
-            }
-
-            $factory = new \YooKassa\Model\Notification\NotificationFactory();
-            $notification = $factory->factory($requestBody);
-            $paymentObject = $notification->getObject();
-
-            $paymentId = $paymentObject->getId();
-
-            // Find local payment
-            $payment = Payment::where('transaction_id', $paymentId)->first();
-
-            if (!$payment) {
-                return response('Payment not found', 200);
-            }
-
-            if ($notification->getEvent() === \YooKassa\Model\Notification\NotificationEventType::PAYMENT_SUCCEEDED) {
-                if ($payment->status !== 'completed') {
-                    $payment->update([
-                        'status' => 'completed',
-                        'paid_at' => now(),
-                    ]);
-
-                    // Extend subscription
-                    $user = $payment->user;
-                    if ($user) {
-                        $currentExpires = $user->subscription_ends_at;
-                        if ($currentExpires && $currentExpires->isFuture()) {
-                            $newExpires = $currentExpires->copy()->addDays(30);
-                        } else {
-                            $newExpires = now()->addDays(30);
-                        }
-                        $user->update(['subscription_ends_at' => $newExpires]);
+                if ($user) {
+                    $currentExpires = $user->subscription_ends_at;
+                    // Ensure Carbon object
+                    if (is_string($currentExpires)) {
+                        $currentExpires = \Illuminate\Support\Facades\Date::parse($currentExpires);
                     }
+
+                    if ($currentExpires && $currentExpires->isFuture()) {
+                        $newExpires = $currentExpires->copy()->addDays(30);
+                    } else {
+                        $newExpires = now()->addDays(30);
+                    }
+                    $user->update(['subscription_ends_at' => $newExpires]);
                 }
-            } elseif ($notification->getEvent() === \YooKassa\Model\Notification\NotificationEventType::PAYMENT_CANCELED) {
-                $payment->update(['status' => 'failed']);
             }
 
             return response('OK', 200);
 
         } catch (\Exception $e) {
-            Log::error('YooKassa Webhook Error: ' . $e->getMessage());
+            Log::error('YooMoney Webhook Error: ' . $e->getMessage());
             return response('Error', 500);
         }
     }

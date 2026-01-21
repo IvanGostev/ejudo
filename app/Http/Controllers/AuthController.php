@@ -29,31 +29,28 @@ class AuthController extends Controller
 
     public function sendCode(Request $request): JsonResponse
     {
-        $request->validate(['phone' => 'required|string|min:10']);
+        $request->validate(['email' => 'required|email']);
 
-        $phone = preg_replace('/[^0-9]/', '', $request->phone);
+        $email = $request->email;
         // OTP Logic
         $code = (string) rand(1000, 9999);
 
-        // In local/testing, maybe don't actually send SMS every time if needed, or stick to prod logic.
-        // For MVP we just send it.
-        if (!app()->isLocal()) {
-            try {
-                $this->smsService->send($phone, "Код подтверждения: $code");
-            } catch (\Exception $e) {
-                return response()->json(['message' => $e->getMessage()], 422);
-            }
+        // Log the code for debugging/audit
+        \Illuminate\Support\Facades\Log::info("Auth code for {$email}: {$code}");
+
+        // Send Email
+        try {
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\AuthCodeMail($code));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send auth email to {$email}: " . $e->getMessage());
+            // Continue flow even if email fails, since we logged the code.
+            // valid for dev/staging or when SMTP has issues but we want to allow login.
         }
 
         // Store in cache for 5 mins
-        Cache::put('sms_code_' . $phone, $code, 300);
+        Cache::put('auth_code_' . $email, $code, 300);
 
-        $response = ['message' => 'Код отправлен'];
-
-        if (app()->isLocal()) {
-            $response['debug_code'] = $code;
-        }
-
+        $response = ['message' => 'Код отправлен на ваш Email'];
 
         return response()->json($response);
     }
@@ -61,34 +58,31 @@ class AuthController extends Controller
     public function verifyCode(Request $request): JsonResponse
     {
         $request->validate([
-            'phone' => 'required|string',
+            'email' => 'required|email',
             'code' => 'required|string',
         ]);
 
-        $phone = preg_replace('/[^0-9]/', '', $request->phone);
-        $cachedCode = Cache::get('sms_code_' . $phone);
+        $email = $request->email;
+        $cachedCode = Cache::get('auth_code_' . $email);
 
         if (!$cachedCode || $cachedCode !== $request->code) {
             throw ValidationException::withMessages(['code' => 'Неверный или истекший код']);
         }
 
         // Logic: Find or create user
-        $user = User::where('phone', $phone)->first();
+        $user = User::where('email', $email)->first();
 
         $isNewUser = false;
         if (!$user) {
             // New User Flow
             $user = User::create([
-                'phone' => $phone,
-                'phone_verified' => true,
+                'email' => $email,
+                'phone_verified' => false, // Not relevant anymore, or keep as false
             ]);
             $isNewUser = true;
-        } else {
-            $user->update(['phone_verified' => true]);
-            $isNewUser = false;
         }
 
-        Cache::forget('sms_code_' . $phone);
+        Cache::forget('auth_code_' . $email);
         Auth::login($user);
 
         // Auto-select company if exists
@@ -100,8 +94,6 @@ class AuthController extends Controller
         $redirectUrl = route('dashboard');
         if ($isNewUser) {
             $redirectUrl = route('instruction.index');
-        } elseif (!$company) {
-            $redirectUrl = route('company.create');
         }
 
         return response()->json(['message' => 'Logged in', 'user' => $user, 'company' => $company, 'redirect_url' => $redirectUrl]);
