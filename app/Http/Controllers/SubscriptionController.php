@@ -17,10 +17,13 @@ class SubscriptionController extends Controller
         // Check if subscribed
         $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
 
+        $price = \App\Models\Setting::where('key', 'subscription_price')->value('value') ?? 5000;
+
         return view('subscription.index', [
             'company' => $company,
             'isSubscribed' => $isSubscribed,
             'subscriptionEndsAt' => $user->subscription_ends_at,
+            'price' => $price,
         ]);
     }
 
@@ -37,7 +40,7 @@ class SubscriptionController extends Controller
             return redirect()->back()->with('error', 'Настройки оплаты не сконфигурированы (YOOMONEY).');
         }
 
-        $amount = 5000.00;
+        $amount = (float) (\App\Models\Setting::where('key', 'subscription_price')->value('value') ?? 5000.00);
 
         // Create local payment record
         $localPayment = Payment::create([

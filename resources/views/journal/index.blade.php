@@ -16,7 +16,7 @@
                         <tr>
                             <th>Период</th>
                             <th>Компания</th>
-                            <th>Роль</th>
+
                             <th>Дата создания</th>
                             <th>Действия</th>
                         </tr>
@@ -35,7 +35,7 @@
                                     @endif
                                 </td>
                                 <td>{{ $journal->company->name ?? '-' }}</td>
-                                <td>{{ $journal->role === 'waste_processor' ? 'Переработчик' : 'Отходообразователь' }}</td>
+
                                 <td>{{ $journal->created_at->format('d.m.Y H:i') }}</td>
                                 <td>
                                     <div class="d-flex gap-2">

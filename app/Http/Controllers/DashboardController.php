@@ -147,12 +147,18 @@ class DashboardController extends Controller
                                 $finalHazard = 5;
 
                             // Auto-learn new code
-                            \App\Models\FkkoCode::create([
-                                'code' => $finalCode,
-                                'name' => $name,
-                                'hazard_class' => $finalHazard,
-                                'category' => 'Автоматически добавленные'
-                            ]);
+                            try {
+                                \App\Models\FkkoCode::firstOrCreate(
+                                    ['code' => $finalCode],
+                                    [
+                                        'name' => $name,
+                                        'hazard_class' => $finalHazard,
+                                        'category' => 'Автоматически добавленные'
+                                    ]
+                                );
+                            } catch (\Exception $e) {
+                                // Ignore duplicate errors if race condition happens
+                            }
                         }
                         // Manual overrides for known tough cases if DB fails (Simulate "Smart" behavior)
                         elseif (mb_stripos($name, 'пленка') !== false) {

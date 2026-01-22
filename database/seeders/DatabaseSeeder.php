@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             FkkoSeeder::class,
             PageSeeder::class,
+            SettingSeeder::class,
         ]);
     }
 }

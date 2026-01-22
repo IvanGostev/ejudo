@@ -18,7 +18,7 @@
                         <div class="card mb-4 border-primary">
                             <div class="card-header bg-primary text-white">Платный тариф</div>
                             <div class="card-body">
-                                <h2>5000 ₽ <small class="text-muted fs-6">/ мес</small></h2>
+                                <h2>{{ (int)$price }} ₽ <small class="text-muted fs-6">/ мес</small></h2>
                                 <ul class="list-unstyled mt-3 mb-4">
                                     <li><i class="bi bi-plus-lg text-judo-orange me-2"></i>История за 5 лет</li>
                                     <li><i class="bi bi-plus-lg text-judo-orange me-2"></i>Неограниченное скачивание PDF и Excel
