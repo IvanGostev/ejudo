@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'tinkoff' => [
+        'terminal_id' => env('TINKOFF_TERMINAL_ID', '1769089749200'),
+        'password' => env('TINKOFF_PASSWORD', 'iRjrvCVsEOYdYfEV'),
+    ],
+
+    'admin_notifications' => [
+        'enabled' => env('NEW_USER_NOTIFICATION', false),
+        'email' => env('NEW_USER_NOTIFICATION_EMAIL'),
+    ],
 ];

@@ -16,12 +16,18 @@
                         required>
                 </div>
 
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <label class="form-check-label" for="remember">Запомнить меня</label>
+                </div>
+
                 <div class="mb-3 d-none" id="code-group">
                     <label for="code" class="form-label">Код из письма</label>
                     <input type="text" class="form-control" id="code" name="code" placeholder="1234" maxlength="4">
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100" id="submit-btn">Получить код</button>
+                <button type="submit" class="btn btn-primary w-100" id="submit-btn"
+                    style="background-color: #FF4C2B; border-color: #FF4C2B;">Получить код</button>
             </form>
 
             <div class="mt-3 text-center">
@@ -43,8 +49,8 @@
                 <p class="small text-muted mb-0">
                     <a href="mailto:support@ejydo.ru" class="text-decoration-none text-muted"><i
                             class="bi bi-envelope me-1"></i>support@ejydo.ru</a><br>
-                    <a href="tel:+79991234567" class="text-decoration-none text-muted"><i
-                            class="bi bi-telephone me-1"></i>+7 (999) 123-45-67</a>
+                    <a href="tel:+79145494242" class="text-decoration-none text-muted"><i
+                            class="bi bi-telephone me-1"></i>+7 (914) 549-42-42</a>
                 </p>
             </div>
 
@@ -85,6 +91,13 @@
                 }
             });
 
+            // Pre-fill email from localStorage
+            const savedEmail = localStorage.getItem('auth_email');
+            if (savedEmail) {
+                $('#email').val(savedEmail);
+                $('#remember').prop('checked', true);
+            }
+
             let step = 'send'; // send or verify
 
             $('#auth-form').on('submit', function (e) {
@@ -92,6 +105,7 @@
 
                 const email = $('#email').val();
                 const code = $('#code').val();
+                const remember = $('#remember').is(':checked');
 
                 if (step === 'send') {
                     if (!email) {
@@ -106,7 +120,6 @@
                             step = 'verify';
                             $('#code-group').removeClass('d-none');
                             $('#submit-btn').text('Войти');
-                            // $('#email').prop('readonly', true);
                             // Code sent successfully
                             $('#alert-container').html('<div class="alert alert-success">Код отправлен на почту!</div>');
                         })
@@ -122,9 +135,17 @@
 
                     $.post('{{ route('auth.verify-code') }}', {
                         email: email,
-                        code: code
+                        code: code,
+                        remember: remember
                     })
                         .done(function (res) {
+                            // Save email if remember is checked
+                            if (remember) {
+                                localStorage.setItem('auth_email', email);
+                            } else {
+                                localStorage.removeItem('auth_email');
+                            }
+
                             if (res.redirect_url) {
                                 window.location.href = res.redirect_url;
                             } else {

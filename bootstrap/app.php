@@ -13,6 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\TenantMiddleware::class,
+            \App\Http\Middleware\ReferralMiddleware::class,
+        ]);
+        $middleware->validateCsrfTokens(except: [
+            'notification',
         ]);
         $middleware->alias([
             'tenant' => \App\Http\Middleware\TenantMiddleware::class,

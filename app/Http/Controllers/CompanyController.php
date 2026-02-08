@@ -26,6 +26,19 @@ class CompanyController extends Controller
             return back()->with('error', 'Без активной подписки можно создать только одну компанию. Оформите подписку для создания дополнительных компаний.');
         }
 
+        $messages = [
+            'inn.min' => 'Введите все символы',
+            'inn.max' => 'Введите все символы',
+            'ogrn.min' => 'Введите все символы',
+            'ogrn.max' => 'Введите все символы',
+            'kpp.max' => 'Введите все символы',
+            'kpp.min' => 'Введите все символы', // in case we add min later
+            'name.required' => 'Введите название компании',
+            'inn.required' => 'Введите ИНН',
+            'ogrn.required' => 'Введите ОГРН',
+            'legal_address.required' => 'Введите юридический адрес',
+        ];
+
         $validated = $request->validate([
             'type' => 'required|in:ООО,ИП',
             'name' => 'required|string|max:255',
@@ -37,11 +50,14 @@ class CompanyController extends Controller
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
-        ]);
+        ], $messages);
 
         $company = $user->companies()->create($validated);
 
-        return redirect()->route('companies.index')->with('success', 'Компания успешно добавлена');
+        // Auto-select the newly created company
+        app(\App\Services\TenantService::class)->setCompany($company);
+
+        return redirect()->route('dashboard')->with('success', 'Компания успешно добавлена и выбрана');
     }
 
     public function edit(\App\Models\UserCompany $company)

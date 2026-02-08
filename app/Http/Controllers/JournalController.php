@@ -381,7 +381,7 @@ class JournalController extends Controller
     public function storeInitialBalance(Request $request)
     {
         $request->validate([
-            'period' => 'required|date_format:Y-m',
+            'period' => 'required|string',
             'wastes' => 'nullable|array',
             'wastes.*.name' => 'required_with:wastes|string',
             'wastes.*.fkko' => 'nullable|string',
@@ -393,7 +393,27 @@ class JournalController extends Controller
         if (!$company)
             abort(404);
 
-        $periodDate = \Carbon\Carbon::createFromFormat('Y-m', $request->period)->startOfMonth();
+        $periodInput = $request->input('period');
+        $periodDate = now();
+
+        try {
+            if (strlen($periodInput) === 4 && is_numeric($periodInput)) {
+                // Year: 2024
+                $periodDate = \Carbon\Carbon::createFromDate((int) $periodInput, 1, 1)->startOfYear();
+            } elseif (str_contains($periodInput, '-Q')) {
+                // Quarter: 2024-Q1
+                $parts = explode('-Q', $periodInput);
+                $year = (int) $parts[0];
+                $quarter = (int) $parts[1];
+                $startMonth = ($quarter - 1) * 3 + 1;
+                $periodDate = \Carbon\Carbon::createFromDate($year, $startMonth, 1)->startOfQuarter();
+            } else {
+                // Month: 2024-01
+                $periodDate = \Carbon\Carbon::createFromFormat('Y-m', $periodInput)->startOfMonth();
+            }
+        } catch (\Exception $e) {
+            return back()->with('error', 'Invalid period format');
+        }
 
         if ($request->has('wastes') && is_array($request->wastes)) {
             foreach ($request->wastes as $waste) {
@@ -566,22 +586,72 @@ class JournalController extends Controller
     public function downloadPdf(string $id)
     {
         $user = auth()->user();
-        $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
-        if (!$isSubscribed) {
+        $company = app(\App\Services\TenantService::class)->getCompany();
+        $journal = \App\Models\JudoJournal::where('company_id', $company->id)->findOrFail($id);
+
+        if (!($user->subscription_ends_at && $user->subscription_ends_at->isFuture())) {
             return back()->with('error', 'Скачивание PDF доступно только по подписке. <a href="' . route('subscription.index') . '" class="alert-link">Купить подписку</a>');
         }
 
         try {
-            $data = $this->prepareSpreadsheet($id);
-            $spreadsheet = $data['spreadsheet'];
-            // Смена расширения на .pdf
-            $filename = str_replace('.xls', '.pdf', $data['filename']);
+            // 1. Prepare Period String
+            $periodDate = \Carbon\Carbon::parse($journal->period);
+            $periodStr = \Illuminate\Support\Str::ucfirst($periodDate->translatedFormat('F Y'));
+            if ($journal->type === 'year') {
+                $periodStr = $periodDate->year . ' год';
+            } elseif ($journal->type === 'quarter') {
+                $q = ceil($periodDate->month / 3);
+                $periodStr = $q . ' квартал ' . $periodDate->year . ' года';
+            }
 
-            $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Mpdf');
+            // 2. Prepare Data Arrays
+            $table1 = $journal->table1_data ?? [];
+            $table2 = $journal->table2_data ?? [];
 
-            return response()->streamDownload(function () use ($writer) {
-                $writer->save('php://output');
+            // Map Operations for Table 3 (Transferred) and Table 4 (Received)
+            $mapOperations = function ($items, $isReceived = false) {
+                return collect($items)->map(function ($item) use ($isReceived) {
+                    $qty = $item['amount'];
+                    $op = mb_strtolower($item['operation'] ?? '');
+
+                    // Default Columns based on operation string if columns are missing
+                    $item['p_process'] = $item['p_process'] ?? (str_contains($op, 'обработ') ? $qty : '-');
+                    $item['p_util'] = $item['p_util'] ?? (str_contains($op, 'утилиз') ? $qty : '-');
+                    $item['p_neutr'] = $item['p_neutr'] ?? (str_contains($op, 'обезвреж') ? $qty : '-');
+
+                    if (!$isReceived) {
+                        $item['p_store'] = $item['p_store'] ?? (str_contains($op, 'хран') ? $qty : '-');
+                        $item['p_bury'] = $item['p_bury'] ?? (str_contains($op, 'захорон') ? $qty : '-');
+                    }
+                    return $item;
+                })->toArray();
+            };
+
+            $table3 = $mapOperations($journal->table3_data ?? [], false);
+            $table4 = $mapOperations($journal->table4_data ?? [], true);
+
+            // 3. Render HTML View
+            $html = view('journal.pdf', compact('journal', 'company', 'periodStr', 'table1', 'table2', 'table3', 'table4'))->render();
+
+            // 4. Generate PDF using mPDF directly
+            $mpdf = new \Mpdf\Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4-L', // Landscape A4
+                'margin_left' => 10,
+                'margin_right' => 10,
+                'margin_top' => 10,
+                'margin_bottom' => 10,
+                'default_font' => 'DejaVuSans' // Supports Cyrillic
+            ]);
+
+            $mpdf->WriteHTML($html);
+
+            $filename = 'Журнал_' . \Illuminate\Support\Str::slug($periodStr) . '.pdf';
+
+            return response()->streamDownload(function () use ($mpdf) {
+                echo $mpdf->Output('', 'S');
             }, $filename);
+
         } catch (\Exception $e) {
             return back()->with('error', 'Ошибка генерации PDF: ' . $e->getMessage());
         }
@@ -605,10 +675,10 @@ class JournalController extends Controller
             $periodStr = \Illuminate\Support\Str::ucfirst($periodDate->translatedFormat('F Y')); // Месяц по умолчанию
 
             if ($journal->type === 'year') {
-                $periodStr = $periodDate->year . ' год';
+                $periodStr = $periodDate->year;
             } elseif ($journal->type === 'quarter') {
                 $q = ceil($periodDate->month / 3);
-                $periodStr = $q . ' квартал ' . $periodDate->year . ' года';
+                $periodStr = $q . ' квартал ' . $periodDate->year;
             }
 
             // 1. ТИТУЛЬНЫЙ ЛИСТ (Индекс 0)

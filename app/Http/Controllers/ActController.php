@@ -28,7 +28,9 @@ class ActController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'files.*' => 'required|file|mimes:doc,docx,pdf|max:10240',
+            'files.*' => 'required|file|mimes:doc,docx|max:10240',
+        ], [
+            'files.*.mimes' => 'Допускаются только файлы в форматах .doc и .docx. PDF-файлы временно не поддерживаются.',
         ]);
 
         $files = $request->file('files');
@@ -39,9 +41,23 @@ class ActController extends Controller
 
         foreach ($files as $file) {
             try {
+                if (!$file->isValid()) {
+                    throw new \Exception("File upload error: " . $file->getErrorMessage());
+                }
+
                 // Save temp file
                 $path = $file->store('acts', 'local');
+
+                if ($path === false) {
+                    throw new \Exception("Failed to store file. Check permissions or disk configuration.");
+                }
+
                 $fullPath = \Illuminate\Support\Facades\Storage::disk('local')->path($path);
+
+                if (!file_exists($fullPath)) {
+                    // Sometimes store() returns relative path but file isn't there?
+                    throw new \Exception("File saved at '$path' but not found at '$fullPath'");
+                }
 
                 // AI Processing (Now handles file upload itself)
                 $data = $ai->extractJsonFromAct($fullPath);

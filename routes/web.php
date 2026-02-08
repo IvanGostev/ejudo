@@ -7,6 +7,11 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+// Webhook for Payments (Must be public and excluded from CSRF)
+Route::any('/notification', [\App\Http\Controllers\SubscriptionController::class, 'webhook'])
+    ->name('subscription.webhook')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
 // Guest Routes
 Route::middleware('guest')->group(function () {
     // Login & Register Pages
@@ -40,12 +45,14 @@ Route::middleware('auth')->group(function () {
         Route::delete('/acts/{act}/item/{itemIndex}', [\App\Http\Controllers\ActController::class, 'destroyItem'])->name('acts.destroy-item');
 
         Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'index'])->name('profile.index');
+        Route::post('/profile/update', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+        Route::post('/profile/withdraw', [\App\Http\Controllers\ProfileController::class, 'withdraw'])->name('profile.withdraw');
         Route::get('/instruction', [\App\Http\Controllers\InstructionController::class, 'index'])->name('instruction.index');
         Route::get('/subscription', [\App\Http\Controllers\SubscriptionController::class, 'index'])->name('subscription.index');
         Route::post('/subscription/create', [\App\Http\Controllers\SubscriptionController::class, 'create'])->name('subscription.create');
         Route::get('/subscription/callback', [\App\Http\Controllers\SubscriptionController::class, 'callback'])->name('subscription.callback');
         Route::get('/success', [\App\Http\Controllers\SubscriptionController::class, 'success'])->name('payment.success');
-        Route::any('/notification', [\App\Http\Controllers\SubscriptionController::class, 'webhook'])->name('subscription.webhook')->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
         Route::get('/fkko/search', [\App\Http\Controllers\FkkoController::class, 'search'])->name('fkko.search');
         Route::get('/fkko', function () {
             return "FKKO Reference (Placeholder)";

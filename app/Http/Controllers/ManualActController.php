@@ -21,6 +21,12 @@ class ManualActController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->has('amount')) {
+            $request->merge([
+                'amount' => str_replace(',', '.', $request->amount)
+            ]);
+        }
+
         $request->validate([
             'date' => 'required|date',
             'number' => 'required|string|max:255',
@@ -30,8 +36,10 @@ class ManualActController extends Controller
             'fkko_code' => 'required|string',
             'hazard_class' => 'required|string',
             'amount' => 'required|numeric|min:0',
-            'operation_type' => 'required|string'
+            'operation_type' => 'required|array|min:1'
         ]);
+
+        $operationType = implode(', ', $request->operation_type);
 
         $tenantService = app(\App\Services\TenantService::class);
         $company = $tenantService->getCompany();
@@ -53,7 +61,7 @@ class ManualActController extends Controller
                     'unit' => 'т',
                     'fkko_code' => $request->fkko_code,
                     'hazard_class' => $request->hazard_class,
-                    'operation_type' => $request->operation_type
+                    'operation_type' => $operationType
                 ]
             ]
         ];
@@ -68,6 +76,8 @@ class ManualActController extends Controller
             'processing_result' => $actData,
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Акт успешно добавлен вручную');
+        $period = date('Y-m', strtotime($request->date));
+
+        return redirect()->route('dashboard', ['period' => $period])->with('success', 'Акт успешно добавлен вручную');
     }
 }

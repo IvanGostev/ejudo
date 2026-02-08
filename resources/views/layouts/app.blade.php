@@ -119,17 +119,38 @@
             background-color: #1f1f1f !important;
         }
     </style>
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+        (function(m,e,t,r,i,k,a){
+            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+            m[i].l=1*new Date();
+            for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=106411023', 'ym');
+
+        ym(106411023, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/106411023" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+    <!-- /Yandex.Metrika counter -->
+
 </head>
 
-<body>
+<body class="d-flex flex-column min-vh-100">
     <!-- Top Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-judo-dark sticky-top">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{{ route('dashboard') }}">eJydo</a>
+            <a class="navbar-brand fw-bold" href="{{ auth()->check() ? route('dashboard') : url('/') }}">eJydo</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNavbar">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="topNavbar">
+                @auth
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
                         <a href="{{ route('dashboard') }}"
@@ -160,55 +181,66 @@
                             href="{{ route('instruction.index') }}">Инструкция</a>
                     </li>
                 </ul>
+                @else
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <!-- Guest Menu items if any, or empty -->
+                </ul>
+                @endauth
                 <div class="d-flex text-white align-items-center">
-                    <!-- Company Selector -->
-                    <div class="dropdown me-3">
-                        @php
-                            $user = auth()->user();
-                            $allCompanies = $user->companies;
-                            $currentCompany = app(\App\Services\TenantService::class)->getCompany();
-                        @endphp
-                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            {{ $currentCompany ? $currentCompany->name : 'Выберите компанию' }}
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            @if($allCompanies->count() > 0)
-                                @foreach($allCompanies as $comp)
-                                    <li>
-                                        <a class="dropdown-item {{ ($currentCompany && $currentCompany->id === $comp->id) ? 'active' : '' }}"
-                                            href="#"
-                                            onclick="event.preventDefault(); document.getElementById('header-switch-company-{{ $comp->id }}').submit();">
-                                            {{ $comp->name }}
-                                        </a>
-                                        <form id="header-switch-company-{{ $comp->id }}" action="{{ route('companies.switch', $comp->id) }}"
-                                            method="POST" class="d-none">
-                                            @csrf
-                                        </form>
-                                    </li>
-                                @endforeach
-                                <li><hr class="dropdown-divider"></li>
-                            @endif
-                            <li>
-                                <a class="dropdown-item" href="{{ route('companies.create') }}">
-                                    <i class="bi bi-plus-lg me-1"></i>Добавить новую
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+                    @auth
+                        <!-- Company Selector -->
+                        <div class="dropdown me-3">
+                            @php
+                                $user = auth()->user();
+                                $allCompanies = $user->companies;
+                                $currentCompany = app(\App\Services\TenantService::class)->getCompany();
+                            @endphp
+                            <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                {{ $currentCompany ? $currentCompany->name : 'Выберите компанию' }}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @if($allCompanies->count() > 0)
+                                    @foreach($allCompanies as $comp)
+                                        <li>
+                                            <a class="dropdown-item {{ ($currentCompany && $currentCompany->id === $comp->id) ? 'active' : '' }}"
+                                                href="#"
+                                                onclick="event.preventDefault(); document.getElementById('header-switch-company-{{ $comp->id }}').submit();">
+                                                {{ $comp->name }}
+                                            </a>
+                                            <form id="header-switch-company-{{ $comp->id }}" action="{{ route('companies.switch', $comp->id) }}"
+                                                method="POST" class="d-none">
+                                                @csrf
+                                            </form>
+                                        </li>
+                                    @endforeach
+                                    <li><hr class="dropdown-divider"></li>
+                                @endif
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('companies.create') }}">
+                                        <i class="bi bi-plus-lg me-1"></i>Добавить новую
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
 
-                    <!-- Logout Button -->
-                    <form action="{{ route('logout') }}" method="POST" class="d-inline ms-2">
-                        @csrf
-                        <button type="submit" class="btn btn-outline-light btn-sm">
-                            <i class="bi bi-box-arrow-right"></i>
-                        </button>
-                    </form>
+                        <!-- Logout Button -->
+                        <form action="{{ route('logout') }}" method="POST" class="d-inline ms-2">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-light btn-sm">
+                                <i class="bi bi-box-arrow-right"></i>
+                            </button>
+                        </form>
+                    @endauth
+                    @guest
+                        <a href="{{ route('login') }}" class="btn btn-outline-light btn-sm">Войти</a>
+                    @endguest
                 </div>
     </nav>
 
-     <div class="container-fluid">
+     <div class="container-fluid flex-grow-1">
          <div class="row">
             <!-- Left Sidebar: FKKO Reference -->
+            @if(auth()->check() && request()->routeIs('dashboard'))
             <div class="col-md-3 col-lg-2 sidebar p-3 d-none d-md-block bg-white border-end"
                 style="min-height: calc(100vh - 56px);">
                 <!-- ... sidebar content ... -->
@@ -290,14 +322,24 @@
                     </script>
                 @endpush
             </div>
+            @endif
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 p-4 bg-light">
+            <div class="{{ (auth()->check() && request()->routeIs('dashboard')) ? 'col-md-9 col-lg-10' : 'col-12' }} p-4 bg-light">
                 @if(session('success'))
                     <div class="alert alert-success">{{ session('success') }}</div>
                 @endif
                 @if(session('error'))
                     <div class="alert alert-danger">{!! session('error') !!}</div>
+                @endif
+                @if($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
                 @endif
 
                 @yield('content')
@@ -339,7 +381,7 @@
             </div>
             <div class="row mt-4 pt-3 border-top border-secondary">
                 <div class="col-12 text-center text-white small">
-                    <p class="mb-0">© 2026 ejydo.ru. ИП Самофалов Денис Олегович ИНН 272336634478</p>
+                    <p class="mb-0">© 2026 ejydo.ru. ИНН 272336634478 ОГРНИП 325270000036421</p>
                 </div>
             </div>
         </div>

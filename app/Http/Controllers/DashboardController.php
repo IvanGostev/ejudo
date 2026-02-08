@@ -137,27 +137,14 @@ class DashboardController extends Controller
                         if ($fkko) {
                             $finalCode = $fkko->code;
                             $finalHazard = $fkko->hazard_class;
-                        }
-                        // If not in DB, but GigaChat extracted a valid code -> SAVE TO DB
-                        elseif ($fkkoCode && strlen($fkkoCode) >= 8) {
-                            $finalCode = $fkkoCode;
-                            $finalHazard = $hazardClass ?? (int) substr(trim($finalCode), -1);
-
-                            if (!$finalHazard || !is_numeric($finalHazard))
-                                $finalHazard = 5;
-
-                            // Auto-learn new code
-                            try {
-                                \App\Models\FkkoCode::firstOrCreate(
-                                    ['code' => $finalCode],
-                                    [
-                                        'name' => $name,
-                                        'hazard_class' => $finalHazard,
-                                        'category' => 'Автоматически добавленные'
-                                    ]
-                                );
-                            } catch (\Exception $e) {
-                                // Ignore duplicate errors if race condition happens
+                        } elseif ($fkkoCode) {
+                            // If AI extracted a code, verify it exists in our DB
+                            $fkkoFromAi = \App\Models\FkkoCode::where('code', $fkkoCode)->first();
+                            if ($fkkoFromAi) {
+                                $finalCode = $fkkoFromAi->code;
+                                $finalHazard = $fkkoFromAi->hazard_class;
+                            } else {
+                                throw new \Exception("Ошибка в заполнении ФККО кода: код {$fkkoCode} не найден в базе данных. Пожалуйста, исправьте файл или свяжитесь с администрацией сайта.");
                             }
                         }
                         // Manual overrides for known tough cases if DB fails (Simulate "Smart" behavior)

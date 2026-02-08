@@ -4,37 +4,11 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0">Загрузка Актов</h4>
         <div class="d-flex">
-            <div class="dropdown me-2">
-                <button class="btn btn-outline-black dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    {{ isset($company) ? $company->name : 'Выберите компанию' }}
-                </button>
-                <ul class="dropdown-menu">
-                    @if(isset($userCompanies) && $userCompanies->count() > 0)
-                        @foreach($userCompanies as $uComp)
-                            <li>
-                                <a class="dropdown-item {{ (isset($company) && $company->id === $uComp->id) ? 'active' : '' }}"
-                                    href="#"
-                                    onclick="event.preventDefault(); document.getElementById('switch-company-{{ $uComp->id }}').submit();">
-                                    {{ $uComp->name }}
-                                </a>
-                                <form id="switch-company-{{ $uComp->id }}" action="{{ route('companies.switch', $uComp->id) }}"
-                                    method="POST" class="d-none">
-                                    @csrf
-                                </form>
-                            </li>
-                        @endforeach
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                    @endif
-                    <li><a class="dropdown-item" href="{{ route('companies.create') }}"><i
-                                class="bi bi-plus-lg me-1"></i>Добавить новую</a></li>
-                </ul>
-            </div>
+
 
             <div class="dropdown">
                 <button class="btn btn-outline-black dropdown-toggle d-flex align-items-center gap-2 px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="fw-medium">{{ $selectedPeriod === 'all' ? 'За все время' : ($periods[$selectedPeriod] ?? $selectedPeriod) }}</span>
+                    <span class="fw-medium">{{ $selectedPeriod === 'all' ? 'За все время' : ((is_string($selectedPeriod) || is_numeric($selectedPeriod)) ? ($periods[$selectedPeriod] ?? $selectedPeriod) : 'Выберите период') }}</span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end shadow p-3" style="min-width: 700px; background-color: #fff; border: 1px solid #dee2e6;">
                     <!-- All Time -->
@@ -114,8 +88,15 @@
             <div class="card-body text-center py-5">
                 <i class="bi bi-cloud-upload display-4 text-muted mb-3"></i>
                 <h5 class="text-muted">Перетащите Акты (doc, docx) сюда</h5>
-                <p class="small text-muted mb-3">или нажмите кнопку для выбора файлов</p>
-                <button class="btn btn-primary" onclick="$('#file-input').click()">Загрузить Акты</button>
+                <p class="small text-muted mb-3">или выберите способ добавления:</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <button class="btn btn-primary px-4" onclick="$('#file-input').click()">
+                        <i class="bi bi-file-earmark-arrow-up me-2"></i>Загрузить файлы
+                    </button>
+                    <a href="{{ route('acts.manual.create') }}" class="btn btn-outline-primary px-4">
+                        <i class="bi bi-plus-lg me-2"></i>Добавить вручную
+                    </a>
+                </div>
                 <input type="file" id="file-input" class="d-none" multiple accept=".doc,.docx">
                 <div id="file-list" class="mt-3"></div>
             </div>

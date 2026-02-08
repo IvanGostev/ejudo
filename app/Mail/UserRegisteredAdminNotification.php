@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -9,18 +10,16 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class AuthCodeMail extends Mailable
+class UserRegisteredAdminNotification extends Mailable
 {
     use Queueable, SerializesModels;
-
-    public string $code;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(string $code)
-    {
-        $this->code = $code;
+    public function __construct(
+        public User $user
+    ) {
     }
 
     /**
@@ -29,7 +28,7 @@ class AuthCodeMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "{$this->code} — Код подтверждения eJydo",
+            subject: 'Новая регистрация пользователя',
         );
     }
 
@@ -39,7 +38,7 @@ class AuthCodeMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.auth_code',
+            markdown: 'emails.admin.user_registered',
         );
     }
 

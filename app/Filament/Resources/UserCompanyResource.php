@@ -26,7 +26,8 @@ class UserCompanyResource extends Resource
             ->components([
                     Forms\Components\Select::make('user_id')
                         ->label('Пользователь')
-                        ->relationship('user', 'phone')
+                        ->relationship('user', 'email')
+                        ->getOptionLabelFromRecordUsing(fn(\App\Models\User $record) => $record->email ?? $record->phone ?? 'ID: ' . $record->id)
                         ->required(),
                     Forms\Components\TextInput::make('name')
                         ->label('Название')
@@ -47,8 +48,19 @@ class UserCompanyResource extends Resource
                     Forms\Components\TextInput::make('legal_address')
                         ->label('Юридический адрес')
                         ->maxLength(255),
-                    Forms\Components\TextInput::make('fact_address')
+                    Forms\Components\TextInput::make('actual_address')
                         ->label('Фактический адрес')
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('contact_person')
+                        ->label('Контактное лицо (Директор)')
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('phone')
+                        ->label('Телефон компании')
+                        ->tel()
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('email')
+                        ->label('Email компании')
+                        ->email()
                         ->maxLength(255),
                     Forms\Components\Toggle::make('is_active')
                         ->label('Активна')
@@ -60,7 +72,7 @@ class UserCompanyResource extends Resource
     {
         return $table
             ->columns([
-                    Tables\Columns\TextColumn::make('user.phone')
+                    Tables\Columns\TextColumn::make('user.email')
                         ->label('Пользователь')
                         ->sortable(),
                     Tables\Columns\TextColumn::make('name')

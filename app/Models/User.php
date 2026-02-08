@@ -29,7 +29,44 @@ class User extends Authenticatable implements FilamentUser, HasName
         'is_admin',
         'tariff',
         'subscription_ends_at',
+        'referral_code',
+        'referrer_id',
+        'referral_balance',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($user) {
+            if (!$user->referral_code) {
+                do {
+                    $code = strtoupper(\Illuminate\Support\Str::random(8));
+                } while (static::where('referral_code', $code)->exists());
+
+                $user->referral_code = $code;
+            }
+        });
+    }
+
+    public function referrer()
+    {
+        return $this->belongsTo(User::class, 'referrer_id');
+    }
+
+    public function referrals()
+    {
+        return $this->hasMany(User::class, 'referrer_id');
+    }
+
+    public function referralEarnings()
+    {
+        return $this->hasMany(ReferralEarning::class);
+    }
+
+    public function referralPayouts()
+    {
+        return $this->hasMany(ReferralPayout::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.

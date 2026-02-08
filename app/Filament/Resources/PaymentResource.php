@@ -25,7 +25,8 @@ class PaymentResource extends Resource
             ->components([
                     Forms\Components\Select::make('user_id')
                         ->label('Пользователь')
-                        ->relationship('user', 'phone'),
+                        ->relationship('user', 'email')
+                        ->getOptionLabelFromRecordUsing(fn(\App\Models\User $record) => $record->email ?? $record->phone ?? 'ID: ' . $record->id),
                     Forms\Components\Select::make('company_id')
                         ->label('Компания')
                         ->relationship('company', 'name'),
@@ -47,7 +48,7 @@ class PaymentResource extends Resource
     {
         return $table
             ->columns([
-                    Tables\Columns\TextColumn::make('user.phone')
+                    Tables\Columns\TextColumn::make('user.email')
                         ->label('Пользователь')
                         ->sortable(),
                     Tables\Columns\TextColumn::make('amount')

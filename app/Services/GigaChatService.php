@@ -65,16 +65,27 @@ class GigaChatService
     {
         $token = $this->getAccessToken();
 
-        if (!file_exists($filePath)) {
-            throw new \Exception("File not found for upload: $filePath");
+        if (!file_exists($filePath) || !is_file($filePath)) {
+            throw new \Exception("File not found or is not a regular file: $filePath");
         }
 
-        $response = Http::withToken($token)
-            ->withOptions(['verify' => false])
-            ->attach('file', file_get_contents($filePath), basename($filePath))
-            ->post($this->baseUrl . '/files', [
-                    'purpose' => 'general'
-                ]);
+        $fileHandle = fopen($filePath, 'r');
+        if ($fileHandle === false) {
+            throw new \Exception("Could not open file for reading: $filePath");
+        }
+
+        try {
+            $response = Http::withToken($token)
+                ->withOptions(['verify' => false])
+                ->attach('file', $fileHandle, basename($filePath))
+                ->post($this->baseUrl . '/files', [
+                        'purpose' => 'general'
+                    ]);
+        } finally {
+            if (is_resource($fileHandle)) {
+                fclose($fileHandle);
+            }
+        }
 
         if ($response->failed()) {
             throw new \Exception('GigaChat File Upload Failed: ' . $response->body());
