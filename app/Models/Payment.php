@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
-    // use BelongsToTenant;
-
     protected $fillable = [
         'user_id',
         'company_id',

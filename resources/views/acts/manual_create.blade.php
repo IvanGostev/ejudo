@@ -1,5 +1,13 @@
 @extends('layouts.app')
 
+@push('styles')
+    <style>
+        #waste-search-section {
+            display: none;
+        }
+    </style>
+@endpush
+
 @section('content')
     <div class="container py-4">
         <div class="row justify-content-center">
@@ -64,90 +72,98 @@
                             </div>
 
                             <hr class="my-4">
-                            <h6 class="text-uppercase text-muted fw-bold mb-3">Информация об отходе</h6>
-
-                            <div class="mb-3 position-relative">
-                                <label class="form-label">Поиск отхода (Наименование или код ФККО)</label>
-                                <input type="text" id="waste-search" class="form-control" placeholder="Начните вводить..."
-                                    value="{{ old('waste_name', $fkko->name ?? '') }}" autocomplete="off" required>
-
-                                <div id="waste-results" class="list-group position-absolute w-100 shadow-sm"
-                                    style="display:none; z-index: 1000; max-height: 250px; overflow-y: auto;"></div>
-
-                                <input type="hidden" name="waste_name" id="hidden-waste-name"
-                                    value="{{ old('waste_name', $fkko->name ?? '') }}">
-                                <input type="hidden" name="fkko_code" id="hidden-fkko-code"
-                                    value="{{ old('fkko_code', $fkko->code ?? '') }}">
-                                <input type="hidden" name="hazard_class" id="hidden-hazard-class"
-                                    value="{{ old('hazard_class', isset($fkko) ? substr($fkko->code, -1) : '') }}">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="text-uppercase text-muted fw-bold mb-0">Информация об отходах</h6>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="addWasteItem()">
+                                    <i class="bi bi-plus-circle"></i> Добавить отход
+                                </button>
                             </div>
 
-                            <div id="selected-waste-display"
-                                class="alert alert-light border mb-4 {{ isset($fkko) ? '' : 'd-none' }}">
-                                <div class="row align-items-center">
-                                    <div class="col">
-                                        <div class="small text-muted mb-1">Выбранный отход:</div>
-                                        <div class="fw-bold" id="display-name">{{ $fkko->name ?? '' }}</div>
-                                        <div class="small">
-                                            Код: <span class="fw-bold" id="display-fkko">{{ $fkko->code ?? '' }}</span> |
-                                            Класс: <span class="fw-bold"
-                                                id="display-hazard">{{ isset($fkko) ? substr($fkko->code, -1) : '' }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-auto">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            onclick="clearWasteSelection()">Изменить</button>
-                                    </div>
-                                </div>
+                            <div id="waste-items-container">
+                                <!-- Waste items will be added here -->
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Количество (тонн)</label>
-                                    <input type="text" name="amount" class="form-control" value="{{ old('amount') }}"
-                                        inputmode="decimal" placeholder="0.000" required>
+                            <div id="waste-search-section" class="border rounded p-3 mb-3">
+                                <div class="mb-3 position-relative">
+                                    <label class="form-label">Поиск отхода (Наименование или код ФККО)</label>
+                                    <input type="text" id="waste-search" class="form-control"
+                                        placeholder="Начните вводить..." autocomplete="off">
+
+                                    <div id="waste-results" class="list-group position-absolute w-100 shadow-sm"
+                                        style="display:none; z-index: 1000; max-height: 250px; overflow-y: auto;"></div>
                                 </div>
-                                <div class="col-12 mb-3">
-                                    <label class="form-label d-block">Вид обращения</label>
-                                    <div class="row">
-                                        <div class="col-md-4 col-6 mb-2">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="operation_type[]"
-                                                    value="Транспортирование" id="op1" checked>
-                                                <label class="form-check-label" for="op1">Транспортирование</label>
+
+                                <div id="selected-waste-display" class="alert alert-light border mb-3 d-none">
+                                    <div class="row align-items-center">
+                                        <div class="col">
+                                            <div class="small text-muted mb-1">Выбранный отход:</div>
+                                            <div class="fw-bold" id="display-name"></div>
+                                            <div class="small">
+                                                Код: <span class="fw-bold" id="display-fkko"></span> |
+                                                Класс: <span class="fw-bold" id="display-hazard"></span>
                                             </div>
                                         </div>
-                                        <div class="col-md-4 col-6 mb-2">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="operation_type[]"
-                                                    value="Утилизация" id="op2">
-                                                <label class="form-check-label" for="op2">Утилизация</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 col-6 mb-2">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="operation_type[]"
-                                                    value="Обезвреживание" id="op3">
-                                                <label class="form-check-label" for="op3">Обезвреживание</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 col-6 mb-2">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="operation_type[]"
-                                                    value="Захоронение" id="op4">
-                                                <label class="form-check-label" for="op4">Захоронение</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 col-6 mb-2">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="operation_type[]"
-                                                    value="Обработка" id="op5">
-                                                <label class="form-check-label" for="op5">Обработка</label>
-                                            </div>
+                                        <div class="col-auto">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                onclick="clearWasteSelection()">Изменить</button>
                                         </div>
                                     </div>
-                                    <div class="form-text">Выберите одно или несколько действий, совершаемых с отходом.
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Количество (тонн)</label>
+                                        <input type="text" id="temp-amount" class="form-control" inputmode="decimal"
+                                            placeholder="0.000">
                                     </div>
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label d-block">Вид обращения</label>
+                                        <div class="row">
+                                            <div class="col-md-4 col-6 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="temp-op1"
+                                                        value="Транспортирование" checked>
+                                                    <label class="form-check-label" for="temp-op1">Транспортирование</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-6 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="temp-op2"
+                                                        value="Утилизация">
+                                                    <label class="form-check-label" for="temp-op2">Утилизация</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-6 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="temp-op3"
+                                                        value="Обезвреживание">
+                                                    <label class="form-check-label" for="temp-op3">Обезвреживание</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-6 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="temp-op4"
+                                                        value="Захоронение">
+                                                    <label class="form-check-label" for="temp-op4">Захоронение</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-6 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="temp-op5"
+                                                        value="Обработка">
+                                                    <label class="form-check-label" for="temp-op5">Обработка</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-text">Выберите одно или несколько действий, совершаемых с отходом.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-end">
+                                    <button type="button" class="btn btn-primary" onclick="addSelectedWaste()">
+                                        Добавить в список
+                                    </button>
                                 </div>
                             </div>
 
@@ -166,23 +182,133 @@
 
 @push('scripts')
     <script>
+        let wasteItems = [];
+        let currentWasteData = null;
+        let wasteItemCounter = 0;
+
         function clearWasteSelection() {
             document.getElementById('waste-search').value = '';
-            document.getElementById('hidden-waste-name').value = '';
-            document.getElementById('hidden-fkko-code').value = '';
-            document.getElementById('hidden-hazard-class').value = '';
+            currentWasteData = null;
             document.getElementById('selected-waste-display').classList.add('d-none');
             document.getElementById('waste-search').focus();
         }
 
+        function addWasteItem() {
+            const section = document.getElementById('waste-search-section');
+            section.style.display = 'block';
+            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            document.getElementById('waste-search').focus();
+        }
+
+        function addSelectedWaste() {
+            if (!currentWasteData) {
+                alert('Пожалуйста, выберите отход из списка');
+                return;
+            }
+
+            const amount = document.getElementById('temp-amount').value.trim().replace(',', '.');
+            if (!amount || parseFloat(amount) <= 0) {
+                alert('Пожалуйста, укажите корректное количество');
+                return;
+            }
+
+            const operationTypes = [];
+            document.querySelectorAll('[id^="temp-op"]:checked').forEach(cb => {
+                operationTypes.push(cb.value);
+            });
+
+            if (operationTypes.length === 0) {
+                alert('Пожалуйста, выберите хотя бы один вид обращения');
+                return;
+            }
+
+            const wasteItem = {
+                id: ++wasteItemCounter,
+                name: currentWasteData.name,
+                fkko_code: currentWasteData.code,
+                hazard_class: currentWasteData.hazard_class,
+                amount: parseFloat(amount),
+                operation_types: operationTypes
+            };
+
+            wasteItems.push(wasteItem);
+            renderWasteItems();
+            resetWasteForm();
+        }
+
+        function removeWasteItem(id) {
+            wasteItems = wasteItems.filter(item => item.id !== id);
+            renderWasteItems();
+        }
+
+        function renderWasteItems() {
+            const container = document.getElementById('waste-items-container');
+
+            if (wasteItems.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">Отходы не добавлены. Нажмите "Добавить отход" для начала.</div>';
+                return;
+            }
+
+            let html = '';
+            wasteItems.forEach((item, index) => {
+                html += `
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-2">${index + 1}. ${item.name}</h6>
+                                            <div class="small text-muted mb-2">
+                                                <strong>Код ФККО:</strong> ${item.fkko_code} | 
+                                                <strong>Класс опасности:</strong> ${item.hazard_class} | 
+                                                <strong>Количество:</strong> ${item.amount} т
+                                            </div>
+                                            <div class="small">
+                                                <strong>Вид обращения:</strong> ${item.operation_types.join(', ')}
+                                            </div>
+                                            <input type="hidden" name="wastes[${index}][name]" value="${item.name}">
+                                            <input type="hidden" name="wastes[${index}][fkko_code]" value="${item.fkko_code}">
+                                            <input type="hidden" name="wastes[${index}][hazard_class]" value="${item.hazard_class}">
+                                            <input type="hidden" name="wastes[${index}][amount]" value="${item.amount}">
+                                            <input type="hidden" name="wastes[${index}][operation_types]" value="${item.operation_types.join(', ')}">
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger ms-3" onclick="removeWasteItem(${item.id})">
+                                            <i class="bi bi-trash"></i> Удалить
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function resetWasteForm() {
+            document.getElementById('waste-search').value = '';
+            document.getElementById('temp-amount').value = '';
+            document.querySelectorAll('[id^="temp-op"]').forEach(cb => {
+                cb.checked = cb.id === 'temp-op1';
+            });
+            currentWasteData = null;
+            document.getElementById('selected-waste-display').classList.add('d-none');
+            document.getElementById('waste-search-section').style.display = 'none';
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
+            renderWasteItems();
+
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function (e) {
+                if (wasteItems.length === 0) {
+                    e.preventDefault();
+                    alert('Пожалуйста, добавьте хотя бы один вид отхода');
+                    return false;
+                }
+            });
+
             const input = document.getElementById('waste-search');
             const results = document.getElementById('waste-results');
             const display = document.getElementById('selected-waste-display');
-
-            const hName = document.getElementById('hidden-waste-name');
-            const hFkko = document.getElementById('hidden-fkko-code');
-            const hHazard = document.getElementById('hidden-hazard-class');
 
             const dName = document.getElementById('display-name');
             const dFkko = document.getElementById('display-fkko');
@@ -210,17 +336,19 @@
                                     a.href = '#';
                                     a.className = 'list-group-item list-group-item-action py-2';
                                     a.innerHTML = `
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div class="small fw-bold text-wrap" style="max-width: 80%;">${item.name}</div>
-                                                <span class="badge bg-primary ms-2">${item.code}</span>
-                                            </div>
-                                        `;
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="small fw-bold text-wrap" style="max-width: 80%;">${item.name}</div>
+                                                        <span class="badge bg-primary ms-2">${item.code}</span>
+                                                    </div>
+                                                `;
                                     a.onclick = (e) => {
                                         e.preventDefault();
 
-                                        hName.value = item.name;
-                                        hFkko.value = item.code;
-                                        hHazard.value = item.hazard_class;
+                                        currentWasteData = {
+                                            name: item.name,
+                                            code: item.code,
+                                            hazard_class: item.hazard_class
+                                        };
 
                                         dName.textContent = item.name;
                                         dFkko.textContent = item.code;

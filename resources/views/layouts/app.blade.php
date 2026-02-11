@@ -119,6 +119,8 @@
             background-color: #1f1f1f !important;
         }
     </style>
+    
+    @stack('styles')
 
     <!-- Favicon -->
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
@@ -175,6 +177,10 @@
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('journal.index') ? 'active' : '' }}"
                             href="{{ route('journal.index') }}">Формирование ЖУДО</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('acts.archive') ? 'active' : '' }}"
+                            href="{{ route('acts.archive') }}">Архив актов</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('instruction.index') ? 'active' : '' }}"

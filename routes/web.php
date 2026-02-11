@@ -6,26 +6,16 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect()->route('login');
 });
-
-// Webhook for Payments (Must be public and excluded from CSRF)
 Route::any('/notification', [\App\Http\Controllers\SubscriptionController::class, 'webhook'])
     ->name('subscription.webhook')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
-
-// Guest Routes
 Route::middleware('guest')->group(function () {
-    // Login & Register Pages
-    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    // We act as if login/register is same flow for SMS? Or separate? 
-    // Usually SMS auth unifies them, but let's keep separate methods if needed.
-    // For now, let's say /login is the main entry.
 
-    // API/Actions
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+
     Route::post('/auth/send-code', [AuthController::class, 'sendCode'])->name('auth.send-code');
     Route::post('/auth/verify-code', [AuthController::class, 'verifyCode'])->name('auth.verify-code');
 });
-
-// Authenticated Routes
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::middleware('tenant')->group(function () {
@@ -62,11 +52,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/acts/manual/create', [\App\Http\Controllers\ManualActController::class, 'create'])->name('acts.manual.create');
         Route::post('/acts/manual/store', [\App\Http\Controllers\ManualActController::class, 'store'])->name('acts.manual.store');
 
+        Route::get('/acts-archive', [\App\Http\Controllers\ActArchiveController::class, 'index'])->name('acts.archive');
+        Route::put('/acts-archive/{act}', [\App\Http\Controllers\ActArchiveController::class, 'update'])->name('acts.archive.update');
+
     });
 
     Route::get('/company/create', [AuthController::class, 'showCompanyCreate'])->name('company.create');
     Route::post('/company', [AuthController::class, 'registerCompany'])->name('company.store');
 });
-
-// Dynamic Pages (Catch-all for pages like /about, /offer)
 Route::get('/{slug}', [\App\Http\Controllers\PageController::class, 'show'])->name('page.show');

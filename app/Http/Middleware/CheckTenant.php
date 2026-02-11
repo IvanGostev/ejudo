@@ -16,8 +16,6 @@ class CheckTenant
     public function handle(Request $request, Closure $next): Response
     {
         if (!$this->tenantService->getCompany()) {
-            // If user has companies, select first (fallback logic already in AuthController, but good to have here too)
-            // If no companies, redirect to creation page.
 
             $user = $request->user();
             if (!$user) {
@@ -28,7 +26,7 @@ class CheckTenant
             if ($company) {
                 $this->tenantService->setCompany($company);
             } else {
-                // Allow access to company creation route
+
                 if (!$request->routeIs('company.create') && !$request->routeIs('company.store')) {
                     return redirect()->route('company.create');
                 }

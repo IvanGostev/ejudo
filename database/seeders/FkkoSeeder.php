@@ -34,7 +34,7 @@ class FkkoSeeder extends Seeder
 
         $count = 0;
         foreach ($rows as $index => $row) {
-            // Skip empty rows or rows where code is missing
+
             if (empty($row[0])) {
                 continue;
             }
@@ -46,8 +46,6 @@ class FkkoSeeder extends Seeder
                 continue;
             }
 
-            // Extract the last digit of the code as hazard class
-            // We strip spaces to be sure we get the last character of the actual code
             $cleanCode = str_replace([' ', '-'], '', $code);
             $hazardClass = (int) substr($cleanCode, -1);
 

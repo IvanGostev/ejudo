@@ -29,10 +29,8 @@ class CreateTenantDatabase implements ShouldQueue
         $dbName = 'user_' . $this->user->id;
 
         try {
-            // Create Database
-            DB::statement("CREATE DATABASE IF NOT EXISTS `{$dbName}`");
 
-            // Configure tenant connection dynamically for migration
+            DB::statement("CREATE DATABASE IF NOT EXISTS `{$dbName}`");
             Config::set("database.connections.tenant", [
                 'driver' => 'mysql',
                 'host' => env('DB_HOST', '127.0.0.1'),
@@ -46,8 +44,6 @@ class CreateTenantDatabase implements ShouldQueue
                 'strict' => true,
                 'engine' => null,
             ]);
-
-            // Run Migrations
             Artisan::call('migrate', [
                 '--database' => 'tenant',
                 '--path' => 'database/migrations/tenant',
@@ -58,7 +54,7 @@ class CreateTenantDatabase implements ShouldQueue
 
         } catch (\Exception $e) {
             Log::error("Failed to create tenant database for user {$this->user->id}: " . $e->getMessage());
-            // Should probably notify admin or retry
+
             throw $e;
         }
     }

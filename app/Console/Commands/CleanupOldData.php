@@ -30,14 +30,10 @@ class CleanupOldData extends Command
     public function handle()
     {
         $this->info('Starting data cleanup...');
-
-        // Process all users
         User::with('companies')->chunk(100, function ($users) {
             foreach ($users as $user) {
-                // Determine retention period
-                $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
 
-                // If subscribed: 5 years. If not: 30 days.
+                $isSubscribed = $user->subscription_ends_at && $user->subscription_ends_at->isFuture();
                 $cutoffDate = $isSubscribed ? now()->subYears(5) : now()->subDays(30);
 
                 if ($user->companies->isEmpty()) {
@@ -45,14 +41,12 @@ class CleanupOldData extends Command
                 }
 
                 $companyIds = $user->companies->pluck('id');
-
-                // 1. Delete Old Acts
                 $actsToDelete = Act::whereIn('company_id', $companyIds)
                     ->where('created_at', '<', $cutoffDate)
                     ->get();
 
                 foreach ($actsToDelete as $act) {
-                    // Try to delete file if exists
+
                     if ($act->filename && Storage::disk('local')->exists($act->filename)) {
                         Storage::disk('local')->delete($act->filename);
                     }
@@ -62,8 +56,6 @@ class CleanupOldData extends Command
                 if ($actsToDelete->isNotEmpty()) {
                     $this->info("User {$user->phone}: Deleted {$actsToDelete->count()} acts (Subscription: " . ($isSubscribed ? 'Yes' : 'No') . ")");
                 }
-
-                // 2. Delete Old Journals
                 $journalsDeleted = JudoJournal::whereIn('company_id', $companyIds)
                     ->where('created_at', '<', $cutoffDate)
                     ->delete();

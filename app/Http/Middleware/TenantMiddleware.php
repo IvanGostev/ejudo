@@ -17,10 +17,6 @@ class TenantMiddleware
             $user = Auth::user();
             $dbName = 'user_' . $user->id;
 
-            // Define tenant connection
-            // Note: We are setting this at runtime. 
-            // Ideally, we might want to check if DB exists, but for performance we assume it does if user exists.
-
             Config::set("database.connections.tenant", [
                 'driver' => 'mysql',
                 'host' => env('DB_HOST', '127.0.0.1'),
@@ -34,8 +30,6 @@ class TenantMiddleware
                 'strict' => true,
                 'engine' => null,
             ]);
-
-            // Reconnect to tenant to ensure new config is used if it was already connected (unlikely per request).
             DB::purge('tenant');
         }
 

@@ -20,21 +20,19 @@ class JournalController extends Controller
                 ->orderBy('period', 'desc')
                 ->get();
         }
-
-        // Генерация периодов для выпадающего списка
         $periods = [];
         $now = now();
-        // 1. Годы
+
         $periods[$now->year] = $now->year . ' год';
         $periods[$now->year - 1] = ($now->year - 1) . ' год';
         $periods['divider1'] = '---';
-        // 2. Кварталы
+
         for ($q = 1; $q <= 4; $q++)
             $periods[$now->year . '-Q' . $q] = $q . ' кв. ' . $now->year;
         for ($q = 1; $q <= 4; $q++)
             $periods[($now->year - 1) . '-Q' . $q] = $q . ' кв. ' . ($now->year - 1);
         $periods['divider2'] = '---';
-        // 3. Месяцы
+
         $current = now()->startOfMonth();
         for ($i = 0; $i < 12; $i++) {
             $periods[$current->format('Y-m')] = \Illuminate\Support\Str::ucfirst($current->translatedFormat('F Y'));
@@ -46,7 +44,7 @@ class JournalController extends Controller
 
     public function create()
     {
-        // Вместо этого используется модальное окно
+
     }
 
     public function store(Request $request)
@@ -59,26 +57,14 @@ class JournalController extends Controller
         if (!$company) {
             return back()->with('error', 'Компания не выбрана.');
         }
-
-        // Получение роли
         $roleName = session('user_role', 'Отходообразователь');
         $roleKey = ($roleName === 'Переработчик отходов') ? 'waste_processor' : 'waste_generator';
 
         $periodInput = trim($request->input('period'));
-
-        // 1. Начальные проверки
         $anyJournalExists = \App\Models\JudoJournal::where('company_id', $company->id)->exists();
         $initialBalancesExist = \App\Models\InitialBalance::where('company_id', $company->id)->exists();
-
-        // Если это первый раз
         if (!$anyJournalExists && !$initialBalancesExist) {
-            // Parse period strictly for redirect
-            // Actually, we can just pass the raw input, but let's be safe.
-            // We need start date to format Y-m usually.
-            // But simpler: just redirect.
-            // We need to know if the input is valid though? generateJournal handles validation.
-            // Let's validate period format partially here or just try to pass 'period'.
-            // If we want 'Y-m', we might need to parse, but let's assume valid from validate rule.
+
             return redirect()->route('journal.initial-balance.create', ['period' => $periodInput]);
         }
 
@@ -87,7 +73,7 @@ class JournalController extends Controller
 
     private function generateJournal($company, $periodInput, $roleKey)
     {
-        // Парсинг периода и определение типа
+
         $startDate = null;
         $endDate = null;
         $type = 'month';
@@ -95,25 +81,25 @@ class JournalController extends Controller
 
         try {
             if (strlen($periodInput) === 4 && is_numeric($periodInput)) {
-                // Год: 2024
+
                 $type = 'year';
                 $startDate = \Carbon\Carbon::createFromDate((int) $periodInput, 1, 1)->startOfDay();
                 $endDate = $startDate->copy()->endOfYear();
                 $periodLabel = $periodInput . ' год';
             } elseif (str_contains($periodInput, '-Q')) {
-                // Квартал: 2024-Q1
+
                 $type = 'quarter';
                 $parts = explode('-Q', $periodInput);
                 $year = (int) $parts[0];
                 $quarter = (int) $parts[1];
-                // Расчет начального месяца: Q1=1, Q2=4, Q3=7, Q4=10
+
                 $startMonth = ($quarter - 1) * 3 + 1;
                 $startDate = \Carbon\Carbon::createFromDate($year, $startMonth, 1)->startOfDay();
-                // Дата окончания — конец 3-го месяца квартала
+
                 $endDate = $startDate->copy()->addMonths(2)->endOfMonth();
                 $periodLabel = $quarter . ' квартал ' . $year;
             } else {
-                // Месяц: 2024-01
+
                 $type = 'month';
                 if (!preg_match('/^\d{4}-\d{2}$/', $periodInput)) {
                     throw new \Exception("Формат Y-m ожидался, получено: $periodInput");
@@ -126,19 +112,11 @@ class JournalController extends Controller
             \Illuminate\Support\Facades\Log::error('Journal Period Error: ' . $e->getMessage());
             return back()->with('error', 'Неверный формат периода: ' . $periodInput . ' (' . $e->getMessage() . ')');
         }
-
-        // 2. Получение входящих остатков
-        // Логика: Найти журнал за предыдущий период (последний перед текущим).
-        // Это позволяет обрабатывать разрывы или смешанные типы периодов (месяц/квартал).
-        // Конечный остаток предыдущего журнала становится начальным остатком текущего.
-
         $prevJournal = \App\Models\JudoJournal::where('company_id', $company->id)
             ->where('period', '<', $startDate->format('Y-m-d'))
             ->where('role', $roleKey)
             ->orderBy('period', 'desc') // Сначала последние
             ->first();
-
-        // Уточненный поиск: нужно убедиться, что предыдущий журнал закончился ДО начала текущего.
 
         $allPrev = \App\Models\JudoJournal::where('company_id', $company->id)
             ->where('period', '<', $startDate->format('Y-m-d'))
@@ -157,21 +135,17 @@ class JournalController extends Controller
                 $pjEnd->endOfQuarter();
             else
                 $pjEnd->endOfMonth();
-
-            // Если этот журнал заканчивается до нашей даты начала, он валидный предшественник
             if ($pjEnd->lt($startDate)) {
                 $validPrevJournal = $pj;
                 break;
             }
         }
         $prevJournal = $validPrevJournal;
-
-
         $prevBalances = [];
         $wasteStats = [];
 
         if (!$prevJournal) {
-            // Использование начальных остатков, если предыдущий журнал не найден
+
             $initials = \App\Models\InitialBalance::where('company_id', $company->id)->get();
             foreach ($initials as $init) {
                 $prevBalances[$init->waste_name] = (float) $init->amount;
@@ -205,8 +179,6 @@ class JournalController extends Controller
                 }
             }
         }
-
-        // 3. Получение актов
         $acts = \App\Models\Act::where('company_id', $company->id)
             ->where('status', 'processed')
             ->get()
@@ -217,10 +189,6 @@ class JournalController extends Controller
                 return $actDate->between($startDate, $endDate);
             });
 
-        // 4. Агрегация данных
-
-
-        // 4. Aggregate
         $table3_data = [];
         $table4_data = [];
 
@@ -265,8 +233,6 @@ class JournalController extends Controller
                     $wasteStats[$name]['fkko'] = $fkko;
                 if (empty($wasteStats[$name]['hazard']))
                     $wasteStats[$name]['hazard'] = $hazard;
-
-                // Aggregation Logic
                 if ($isWasteGenerator && !$isInternal) {
                     $wasteStats[$name]['transferred'] += $qty;
                     $table3_data[] = [
@@ -312,8 +278,6 @@ class JournalController extends Controller
                 }
             }
         }
-
-        // 5. Final Balances
         $table2 = [];
         $uniqueWastes = array_unique(array_merge(array_keys($prevBalances), array_keys($wasteStats)));
         $table1_data = [];
@@ -398,17 +362,17 @@ class JournalController extends Controller
 
         try {
             if (strlen($periodInput) === 4 && is_numeric($periodInput)) {
-                // Year: 2024
+
                 $periodDate = \Carbon\Carbon::createFromDate((int) $periodInput, 1, 1)->startOfYear();
             } elseif (str_contains($periodInput, '-Q')) {
-                // Quarter: 2024-Q1
+
                 $parts = explode('-Q', $periodInput);
                 $year = (int) $parts[0];
                 $quarter = (int) $parts[1];
                 $startMonth = ($quarter - 1) * 3 + 1;
                 $periodDate = \Carbon\Carbon::createFromDate($year, $startMonth, 1)->startOfQuarter();
             } else {
-                // Month: 2024-01
+
                 $periodDate = \Carbon\Carbon::createFromFormat('Y-m', $periodInput)->startOfMonth();
             }
         } catch (\Exception $e) {
@@ -436,10 +400,6 @@ class JournalController extends Controller
             }
         }
 
-        // After saving (or skipping), immediately generate the journal for this period.
-        // This bypasses the check for existing journals/balances in 'store',
-        // satisfying the requirement that the first journal is created now.
-
         $roleName = session('user_role', 'Отходообразователь');
         $roleKey = ($roleName === 'Переработчик отходов') ? 'waste_processor' : 'waste_generator';
 
@@ -450,8 +410,6 @@ class JournalController extends Controller
     {
         $company = app(\App\Services\TenantService::class)->getCompany();
         $journal = \App\Models\JudoJournal::where('company_id', $company->id)->findOrFail($id);
-
-        // Загрузка отходов для выпадающего списка
         $wastes = \App\Models\FkkoCode::orderBy('name')->get(['name', 'code', 'hazard_class']);
 
         return view('journal.show', compact('journal', 'wastes'));
@@ -459,7 +417,7 @@ class JournalController extends Controller
 
     public function edit(string $id)
     {
-        //
+
     }
 
     public function update(Request $request, string $id)
@@ -480,10 +438,8 @@ class JournalController extends Controller
         $extraUpdates = [];
 
         if (isset($data[$request->row_index])) {
-            // Обновление запрошенной колонки
-            $data[$request->row_index][$request->column] = $request->value;
 
-            // Умное обновление: Если изменено название отхода, обновляем ФККО и класс опасности
+            $data[$request->row_index][$request->column] = $request->value;
             if ($request->column === 'waste') {
                 $fkkoEntry = \App\Models\FkkoCode::where('name', $request->value)->first();
                 if ($fkkoEntry) {
@@ -507,8 +463,6 @@ class JournalController extends Controller
                     ];
                 }
             }
-
-            // Auto-calculate Amount for Table 3
             if ($table === 'table3_data' && in_array($request->column, ['p_process', 'p_util', 'p_neutr', 'p_store', 'p_bury'])) {
                 $row = $data[$request->row_index];
                 $sum = (float) str_replace(',', '.', $row['p_process'] ?? 0) +
@@ -520,8 +474,6 @@ class JournalController extends Controller
                 $data[$request->row_index]['amount'] = $sum;
                 $extraUpdates['amount'] = rtrim(rtrim(number_format($sum, 3), '0'), '.');
             }
-
-            // Auto-calculate Amount for Table 4
             if ($table === 'table4_data' && in_array($request->column, ['p_process', 'p_util', 'p_neutr'])) {
                 $row = $data[$request->row_index];
                 $sum = (float) str_replace(',', '.', $row['p_process'] ?? 0) +
@@ -531,12 +483,10 @@ class JournalController extends Controller
                 $data[$request->row_index]['amount'] = $sum;
                 $extraUpdates['amount'] = rtrim(rtrim(number_format($sum, 3), '0'), '.');
             }
-
-            // 4. Проверка на удаление (если количество = 0)
             $currentAmount = str_replace(',', '.', $data[$request->row_index]['amount'] ?? 0);
             if ((float) $currentAmount == 0) {
                 unset($data[$request->row_index]);
-                // Переиндексация массива
+
                 $journal->$table = array_values($data);
                 $journal->save();
                 return response()->json(['success' => true, 'action' => 'deleted']);
@@ -594,7 +544,7 @@ class JournalController extends Controller
         }
 
         try {
-            // 1. Prepare Period String
+
             $periodDate = \Carbon\Carbon::parse($journal->period);
             $periodStr = \Illuminate\Support\Str::ucfirst($periodDate->translatedFormat('F Y'));
             if ($journal->type === 'year') {
@@ -603,18 +553,12 @@ class JournalController extends Controller
                 $q = ceil($periodDate->month / 3);
                 $periodStr = $q . ' квартал ' . $periodDate->year . ' года';
             }
-
-            // 2. Prepare Data Arrays
             $table1 = $journal->table1_data ?? [];
             $table2 = $journal->table2_data ?? [];
-
-            // Map Operations for Table 3 (Transferred) and Table 4 (Received)
             $mapOperations = function ($items, $isReceived = false) {
                 return collect($items)->map(function ($item) use ($isReceived) {
                     $qty = $item['amount'];
                     $op = mb_strtolower($item['operation'] ?? '');
-
-                    // Default Columns based on operation string if columns are missing
                     $item['p_process'] = $item['p_process'] ?? (str_contains($op, 'обработ') ? $qty : '-');
                     $item['p_util'] = $item['p_util'] ?? (str_contains($op, 'утилиз') ? $qty : '-');
                     $item['p_neutr'] = $item['p_neutr'] ?? (str_contains($op, 'обезвреж') ? $qty : '-');
@@ -629,11 +573,7 @@ class JournalController extends Controller
 
             $table3 = $mapOperations($journal->table3_data ?? [], false);
             $table4 = $mapOperations($journal->table4_data ?? [], true);
-
-            // 3. Render HTML View
             $html = view('journal.pdf', compact('journal', 'company', 'periodStr', 'table1', 'table2', 'table3', 'table4'))->render();
-
-            // 4. Generate PDF using mPDF directly
             $mpdf = new \Mpdf\Mpdf([
                 'mode' => 'utf-8',
                 'format' => 'A4-L', // Landscape A4
@@ -680,54 +620,40 @@ class JournalController extends Controller
                 $q = ceil($periodDate->month / 3);
                 $periodStr = $q . ' квартал ' . $periodDate->year;
             }
-
-            // 1. ТИТУЛЬНЫЙ ЛИСТ (Индекс 0)
             $sheetTitular = $spreadsheet->getSheet(0);
-
-            // Поиск и замена плейсхолдеров
             foreach ($sheetTitular->getRowIterator() as $row) {
                 $cellIterator = $row->getCellIterator();
                 $cellIterator->setIterateOnlyExistingCells(false);
                 foreach ($cellIterator as $cell) {
                     $val = $cell->getValue();
                     if (is_string($val)) {
-                        // Замена периода (Ячейка D11 обычно содержит "июнь 2025")
-                        // Проверяем наличие плейсхолдера в шаблоне.
                         if (mb_strpos($val, 'июнь 2025') !== false) {
                             $cell->setValue(str_replace('июнь 2025', $periodStr, $val));
                         }
 
-                        // Замена Названия Компании (Ячейка D9)
-                        // Заменяем любое вхождение "ЭкоСфера" или аналогичного
                         if (mb_strpos($val, 'ЭкоСфера') !== false) {
                             $cell->setValue($company->name);
                         }
 
-                        // Замена Имени Руководителя
-                        // Поиск контекста "Ларин" или "Руководитель"
                         if (mb_strpos($val, 'Ларин') !== false) {
                             $cell->setValue(str_replace('Ларин И.А.', $company->contact_person ?? '', $val));
                         }
-                        // Или если это специальное подчеркивание рядом с "Руководитель"
+
                         elseif (mb_strpos($val, 'Руководитель') !== false) {
-                            // Логика заполнения 
+
                         }
                     }
                 }
             }
-
-            // 2. Хелпер заполнения данных
             $populateTable = function ($sheetIndex, $data, $columns) use ($spreadsheet) {
                 $sheet = $spreadsheet->getSheet($sheetIndex);
-                // Поиск строки нумерации заголовков (строка с "1" в колонке B/C)
-                $startRow = 10;
 
-                // Сканирование первых 20 строк для поиска нумерации
+                $startRow = 10;
                 foreach ($sheet->getRowIterator() as $row) {
                     if ($row->getRowIndex() > 20)
                         break;
                     foreach ($row->getCellIterator() as $cell) {
-                        // Проверка на "1" в типичной колонке ID
+
                         if (trim($cell->getValue()) === '1') {
                             $startRow = $row->getRowIndex() + 1; // Вставка ПОСЛЕ этой строки
                             break 2;
@@ -741,10 +667,6 @@ class JournalController extends Controller
                 foreach ($data as $item) {
                     $sheet->setCellValue('B' . $r, $rowNum++); // Предполагаем, что колонка B обычно ID
 
-                    // Маппинг колонок начиная с C
-                    // Таблица 1: B=ID, C=Name, D=FKKO, E=Hazard.
-                    // Обычно начинаем с 'C' для данных.
-
                     $colIndex = 'C';
 
                     foreach ($columns as $key) {
@@ -757,8 +679,6 @@ class JournalController extends Controller
                     }
                     $r++;
                 }
-
-                // Очистка оставшихся строк
                 while ($sheet->getCell('B' . $r)->getValue() != '') {
                     $sheet->setCellValue('B' . $r, '');
                     $c = 'C';
@@ -769,15 +689,7 @@ class JournalController extends Controller
                     $r++;
                 }
             };
-
-            // Уточненный маппинг на основе колонок
-
-            // Таблица 1: Name, FKKO, Hazard
             $populateTable(1, $journal->table1_data ?? [], ['name', 'fkko', 'hazard']);
-
-            // Таблица 2: Обобщенные данные
-            // Прим.: Колонки Таблицы 2 в Excel: F=Начало, G=Образовано, H=Получено, J=Исп, K=Обезвр, L=Хранение, M=Захорон, N=Передано, O=Конец
-
             $t2_data = collect($journal->table2_data)->map(function ($item) {
                 $item['rec_copy'] = $item['received'];
                 $item['storage'] = 0; // Предполагаем отсутствие хранения
@@ -800,22 +712,14 @@ class JournalController extends Controller
                 'balance_end'
             ]);
 
-
-            // Таблица 3 (Переданные)
-            // Колонки C..O: Дата, Номер, Отход, ФККО, Класс, Кол-во, Цели(5), Контрагент...
-
             $t3_data = collect($journal->table3_data)->map(function ($item) {
                 $op = $item['operation'] ?? '';
                 $qty = $item['amount'];
-
-                // Приоритет: Ручная правка -> Автоматическое определение по операции -> Прочерк
                 $item['p_process'] = $item['p_process'] ?? (str_contains($op, 'обработ') ? $qty : '-');
                 $item['p_util'] = $item['p_util'] ?? (str_contains($op, 'утилиз') ? $qty : '-');
                 $item['p_neutr'] = $item['p_neutr'] ?? (str_contains($op, 'обезвреж') ? $qty : '-');
                 $item['p_store'] = $item['p_store'] ?? (str_contains($op, 'хран') ? $qty : '-');
                 $item['p_bury'] = $item['p_bury'] ?? (str_contains($op, 'захорон') ? $qty : '-');
-
-                // Для передачи (прочее)
                 if (!isset($item['p_transf'])) {
                     $isOther = !str_contains($op, 'обработ')
                         && !str_contains($op, 'утилиз')
@@ -845,24 +749,14 @@ class JournalController extends Controller
                 'validity'
             ]);
 
-
-            // Таблица 4 (Полученные)
             $t4_data = collect($journal->table4_data)->map(function ($item) {
                 $op = $item['operation'] ?? '';
                 $qty = $item['amount'];
-
-                // Приоритет: Ручная правка -> Автоматическое определение -> Прочерк
                 $item['p_process'] = $item['p_process'] ?? (str_contains($op, 'обработ') ? $qty : '-');
                 $item['p_util'] = $item['p_util'] ?? (str_contains($op, 'утилиз') ? $qty : '-');
                 $item['p_neutr'] = $item['p_neutr'] ?? (str_contains($op, 'обезвреж') ? $qty : '-');
                 $item['p_store'] = $item['p_store'] ?? (str_contains($op, 'хран') ? $qty : '-');
                 $item['p_bury'] = $item['p_bury'] ?? (str_contains($op, 'захорон') ? $qty : '-');
-
-                // Для приема обычно нет колонки "Передача", но есть "Для использования" (p_util) и т.д.
-                // В таблице 4 (Полученные) колонки: Обраб, Утил, Обезвр. (по шаблону)
-                // Но в mapItems для T4 мы используем: p_process, p_util, p_neutr.
-                // А p_transf, p_store, p_bury - нужны ли?
-                // Посмотрим на columns: amount, p_transf, p_process...
 
                 if (!isset($item['p_transf'])) {
                     $isOther = !str_contains($op, 'обработ') && !str_contains($op, 'утилиз') && !str_contains($op, 'обезвреж') && !str_contains($op, 'хран') && !str_contains($op, 'захорон');
@@ -879,11 +773,7 @@ class JournalController extends Controller
                 'hazard',
                 'amount',
                 'p_transf', // Внимание: в Таблице 4 шаблона может не быть этой колонки.
-                // Но мы передаем индекс, а populateTable пишет последовательно.
-                // Проверим шаблон HTML. T4: amount, process, util, neutr.
-                // А в экспорте: amount, p_transf, p_process...
-                // Это может быть ошибкой в исходном коде экспорта, если он не совпадает с шаблоном.
-                // Но я пока просто сохраняю логику "уважения" ручных правок.
+
                 'p_process',
                 'p_util',
                 'p_neutr',
@@ -893,8 +783,6 @@ class JournalController extends Controller
                 'number',
                 'validity'
             ]);
-
-            // Возврат к нормальному виду (отключение разметки страниц)
             foreach ($spreadsheet->getAllSheets() as $sheet) {
                 $sheet->getSheetView()->setView(\PhpOffice\PhpSpreadsheet\Worksheet\SheetView::SHEETVIEW_NORMAL);
             }

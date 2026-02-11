@@ -32,26 +32,18 @@ class AuthController extends Controller
         $request->validate(['email' => 'required|email']);
 
         $email = $request->email;
-        // OTP Logic
+
         if ($email === 'test@email.com') {
             $code = '0000';
         } else {
             $code = (string) rand(1000, 9999);
         }
-
-        // Log the code for debugging/audit
         \Illuminate\Support\Facades\Log::info("Auth code for {$email}: {$code}");
-
-        // Send Email
         try {
             \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\AuthCodeMail($code));
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Failed to send auth email to {$email}: " . $e->getMessage());
-            // Continue flow even if email fails, since we logged the code.
-            // valid for dev/staging or when SMTP has issues but we want to allow login.
         }
-
-        // Store in cache for 5 mins
         Cache::put('auth_code_' . $email, $code, 300);
 
         $response = ['message' => 'Код отправлен на ваш Email'];
@@ -72,13 +64,11 @@ class AuthController extends Controller
         if (!$cachedCode || $cachedCode !== $request->code) {
             throw ValidationException::withMessages(['code' => 'Неверный или истекший код']);
         }
-
-        // Logic: Find or create user
         $user = User::where('email', $email)->first();
 
         $isNewUser = false;
         if (!$user) {
-            // Check for referral
+
             $referrerId = null;
             $refCode = $request->cookie('referral_code');
             if ($refCode) {
@@ -87,16 +77,12 @@ class AuthController extends Controller
                     $referrerId = $referrer->id;
                 }
             }
-
-            // New User Flow
             $user = User::create([
                 'email' => $email,
                 'phone_verified' => false,
                 'referrer_id' => $referrerId,
             ]);
             $isNewUser = true;
-
-            // Clear cookie
             if ($refCode) {
                 \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('referral_code'));
             }
@@ -113,8 +99,6 @@ class AuthController extends Controller
 
         Cache::forget('auth_code_' . $email);
         Auth::login($user, $request->boolean('remember'));
-
-        // Auto-select company if exists
         $company = $user->companies()->first();
         if ($company) {
             $this->tenantService->setCompany($company);
@@ -136,8 +120,6 @@ class AuthController extends Controller
     public function registerCompany(Request $request): JsonResponse
     {
         $user = Auth::user();
-
-        // Check limit
         $subscriptionEnds = $user->subscription_ends_at;
         if (is_string($subscriptionEnds)) {
             $subscriptionEnds = \Illuminate\Support\Facades\Date::parse($subscriptionEnds);

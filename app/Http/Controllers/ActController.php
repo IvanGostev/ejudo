@@ -11,7 +11,7 @@ class ActController extends Controller
      */
     public function index()
     {
-        //
+
     }
 
     /**
@@ -19,7 +19,7 @@ class ActController extends Controller
      */
     public function create()
     {
-        //
+
     }
 
     /**
@@ -44,8 +44,6 @@ class ActController extends Controller
                 if (!$file->isValid()) {
                     throw new \Exception("File upload error: " . $file->getErrorMessage());
                 }
-
-                // Save temp file
                 $path = $file->store('acts', 'local');
 
                 if ($path === false) {
@@ -55,24 +53,20 @@ class ActController extends Controller
                 $fullPath = \Illuminate\Support\Facades\Storage::disk('local')->path($path);
 
                 if (!file_exists($fullPath)) {
-                    // Sometimes store() returns relative path but file isn't there?
+
                     throw new \Exception("File saved at '$path' but not found at '$fullPath'");
                 }
-
-                // AI Processing (Now handles file upload itself)
                 $data = $ai->extractJsonFromAct($fullPath);
-
-                // Save to DB
                 $tenantService = app(\App\Services\TenantService::class);
                 $company = $tenantService->getCompany();
 
                 if (!$company) {
                     $user = auth()->user();
-                    // Try to find any company
+
                     $company = $user->companies()->first();
 
                     if (!$company) {
-                        // Create default company if none exists
+
                         $company = $user->companies()->create([
                             'name' => 'Моя Организация',
                             'inn' => '0000000000',
@@ -94,8 +88,6 @@ class ActController extends Controller
                     'status' => 'processed',
                     'processing_result' => $data,
                 ]);
-
-                // For now ensuring we return the data to frontend to show "Processed"
                 $processed[] = [
                     'filename' => $file->getClientOriginalName(),
                     'data' => $data,
@@ -119,7 +111,7 @@ class ActController extends Controller
      */
     public function show(string $id)
     {
-        //
+
     }
 
     /**
@@ -127,7 +119,7 @@ class ActController extends Controller
      */
     public function edit(string $id)
     {
-        //
+
     }
 
     /**
@@ -141,40 +133,24 @@ class ActController extends Controller
         $field = $request->input('field');
         $value = $request->input('value');
         $itemIndex = $request->input('item_index'); // This will be null if not provided, or an integer
-
-        // Root fields: date, number, provider, receiver
         if (in_array($field, ['date', 'number', 'provider', 'receiver'])) {
-            // Check if we need to SPLIT the act
-            // This happens if:
-            // 1. The act has multiple items.
-            // 2. The edit is for a specific item (itemIndex is provided).
-            // 3. The user wants to change a root field for *that specific item* only.
-            if (isset($data['items']) && count($data['items']) > 1 && $itemIndex !== null && isset($data['items'][$itemIndex])) {
-                // --- SPLIT LOGIC ---
 
-                // 1. Create a new Act instance by replicating the original
+            if (isset($data['items']) && count($data['items']) > 1 && $itemIndex !== null && isset($data['items'][$itemIndex])) {
+
                 $newAct = $act->replicate();
                 $newAct->status = 'processed'; // Ensure status is correct for new act
-
-                // 2. Prepare data for the new Act
                 $newDataForNewAct = $data; // Start with a copy of the original act_data
                 $targetItem = $data['items'][$itemIndex]; // Get the item to be moved
-
-                // The new Act will contain ONLY this target item
                 $newDataForNewAct['items'] = [$targetItem];
-                // Apply the update to the root field in the new Act's data
+
                 $newDataForNewAct[$field] = $value;
                 $newAct->act_data = $newDataForNewAct;
                 $newAct->save();
-
-                // 3. Modify the original Act: remove the item that was moved to the new Act
                 unset($data['items'][$itemIndex]);
-                // Re-index the array to prevent gaps
+
                 $data['items'] = array_values($data['items']);
                 $act->act_data = $data;
                 $act->save();
-
-                // Return response indicating a split occurred
                 return response()->json([
                     'success' => true,
                     'split' => true,
@@ -183,11 +159,9 @@ class ActController extends Controller
                 ]);
             }
 
-            // If not splitting (e.g., only one item in the act, or itemIndex not provided),
-            // then update the root field directly on the current act.
             $data[$field] = $value;
         }
-        // Item-level fields
+
         elseif (in_array($field, ['quantity', 'name'])) {
             if (isset($data['items'][$itemIndex])) {
                 $data['items'][$itemIndex][$field] = $value;
@@ -217,11 +191,9 @@ class ActController extends Controller
 
         if (isset($data['items']) && isset($data['items'][$itemIndex])) {
             unset($data['items'][$itemIndex]);
-            // Re-index array to prevent gaps
+
             $data['items'] = array_values($data['items']);
 
-            // If no items left, delete the act? Or keep empty act?
-            // User likely expects "Deleting report" -> if it's the last one, the Act itself is gone.
             if (empty($data['items'])) {
                 $act->delete();
             } else {

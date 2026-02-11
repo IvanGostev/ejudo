@@ -112,8 +112,6 @@ class ReferralPayoutResource extends Resource
     {
         return [
             'index' => Pages\ListReferralPayouts::route('/'),
-            // 'create' => Pages\CreateReferralPayout::route('/create'),
-            // 'edit' => Pages\EditReferralPayout::route('/{record}/edit'),
         ];
     }
 }

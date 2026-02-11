@@ -68,7 +68,7 @@ class PaymentResource extends Resource
                         ->sortable(),
                 ])
             ->filters([
-                    //
+
                 ])
             ->actions([
                     \Filament\Actions\EditAction::make()->label('Редактировать'),
@@ -83,7 +83,7 @@ class PaymentResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+
         ];
     }
 

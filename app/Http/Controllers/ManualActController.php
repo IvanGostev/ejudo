@@ -21,25 +21,18 @@ class ManualActController extends Controller
 
     public function store(Request $request)
     {
-        if ($request->has('amount')) {
-            $request->merge([
-                'amount' => str_replace(',', '.', $request->amount)
-            ]);
-        }
-
         $request->validate([
             'date' => 'required|date',
             'number' => 'required|string|max:255',
             'provider' => 'required|string|max:255',
             'receiver' => 'required|string|max:255',
-            'waste_name' => 'required|string',
-            'fkko_code' => 'required|string',
-            'hazard_class' => 'required|string',
-            'amount' => 'required|numeric|min:0',
-            'operation_type' => 'required|array|min:1'
+            'wastes' => 'required|array|min:1',
+            'wastes.*.name' => 'required|string',
+            'wastes.*.fkko_code' => 'required|string',
+            'wastes.*.hazard_class' => 'required|string',
+            'wastes.*.amount' => 'required|numeric|min:0',
+            'wastes.*.operation_types' => 'required|string'
         ]);
-
-        $operationType = implode(', ', $request->operation_type);
 
         $tenantService = app(\App\Services\TenantService::class);
         $company = $tenantService->getCompany();
@@ -48,22 +41,24 @@ class ManualActController extends Controller
             return back()->with('error', 'Компания не выбрана');
         }
 
-        // Construct act data similarly to parsed data
+        $items = [];
+        foreach ($request->wastes as $waste) {
+            $items[] = [
+                'name' => $waste['name'],
+                'quantity' => (float) $waste['amount'],
+                'unit' => 'т',
+                'fkko_code' => $waste['fkko_code'],
+                'hazard_class' => $waste['hazard_class'],
+                'operation_type' => $waste['operation_types']
+            ];
+        }
+
         $actData = [
             'number' => $request->number,
             'date' => $request->date,
             'provider' => $request->provider,
             'receiver' => $request->receiver,
-            'items' => [
-                [
-                    'name' => $request->waste_name,
-                    'quantity' => (float) $request->amount,
-                    'unit' => 'т',
-                    'fkko_code' => $request->fkko_code,
-                    'hazard_class' => $request->hazard_class,
-                    'operation_type' => $operationType
-                ]
-            ]
+            'items' => $items
         ];
 
         \App\Models\Act::create([
@@ -72,7 +67,7 @@ class ManualActController extends Controller
             'original_name' => 'Ручной ввод',
             'file_size' => 0,
             'act_data' => $actData,
-            'status' => 'processed', // Immediately processed
+            'status' => 'processed',
             'processing_result' => $actData,
         ]);
 

@@ -41,8 +41,6 @@ class SimulateSubscriptionCommand extends Command
         $this->info("Simulating subscription for: {$user->email}");
 
         $amount = (float) (Setting::where('key', 'subscription_price')->value('value') ?? 5000.00);
-
-        // 1. Create completed payment record
         $payment = Payment::create([
             'user_id' => $user->id,
             'amount' => $amount,
@@ -52,8 +50,6 @@ class SimulateSubscriptionCommand extends Command
             'paid_at' => now(),
             'transaction_id' => 'CONSOLE_' . strtoupper(Str::random(10)),
         ]);
-
-        // 2. Extend subscription
         $currentExpires = $user->subscription_ends_at;
         if (is_string($currentExpires)) {
             $currentExpires = \Illuminate\Support\Facades\Date::parse($currentExpires);
@@ -67,8 +63,6 @@ class SimulateSubscriptionCommand extends Command
 
         $user->update(['subscription_ends_at' => $newExpires]);
         $this->info("Subscription extended until: " . $newExpires->format('d.m.Y H:i'));
-
-        // 3. Process Referral Bonus
         if ($user->referrer_id) {
             $referrer = $user->referrer;
             if ($referrer) {

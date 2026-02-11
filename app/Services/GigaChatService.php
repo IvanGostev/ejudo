@@ -22,17 +22,13 @@ class GigaChatService
 
     protected function getAccessToken(): ?string
     {
-        // Check cache first to avoid rate limits
+
         if (cache()->has('gigachat_token')) {
             return cache()->get('gigachat_token');
         }
 
         $authKey = env('GIGACHAT_AUTH_KEY');
         $scope = env('GIGACHAT_SCOPE', 'GIGACHAT_API_PERS');
-
-        // Need to disable SSL verification for development environments often with GigaChat/Sber certs
-        // or ensure the Russian CA certificates are installed. 
-        // For this environment, we use 'verify' => false cautiously.
 
         $response = Http::withHeaders([
             'Authorization' => 'Basic ' . $authKey,
@@ -48,10 +44,6 @@ class GigaChatService
         if ($response->successful()) {
             $token = $response->json('access_token');
             $expiresAt = $response->json('expires_at'); // Unix timestamp
-
-            // Cache slightly less than expiration
-            // If expires_at is milliseconds, convert. Usually it's milliseconds from epoch.
-            // Assuming 30 minutes safe cache.
             cache()->put('gigachat_token', $token, 1700);
 
             return $token;
@@ -103,7 +95,7 @@ class GigaChatService
         }
 
         try {
-            // 1. Upload File
+
             $fileId = $this->uploadFile($filePath);
 
             $prompt = "Проанализируй этот документ (Акт выполненных работ) и извлеки данные.
@@ -155,8 +147,6 @@ class GigaChatService
             }
 
             $content = $response->json('choices.0.message.content');
-
-            // Clean markdown jsons
             $content = str_replace(['```json', '```'], '', $content);
             $content = trim($content);
 

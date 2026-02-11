@@ -39,7 +39,7 @@ class TestEmail extends Command
         } catch (\Throwable $e) {
             $this->error('Failed to send email.');
             $this->error('Error Message: ' . $e->getMessage());
-            // $this->error('Trace: ' . $e->getTraceAsString());
+
         }
     }
 }

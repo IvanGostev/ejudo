@@ -18,8 +18,6 @@ return new class extends Migration {
             $table->string('hazard_class')->nullable();
             $table->decimal('amount', 15, 3)->default(0);
             $table->year('year'); // Balance at start of which year? or date? simplified to year or period?
-            // Actually, usually Initial Balance is relevant for the first report period. 
-            // Let's store period 'YYYY-MM-01' to align with journals.
             $table->date('period');
             $table->timestamps();
         });

@@ -11,8 +11,6 @@ class DashboardController extends Controller
         $tenantService = app(\App\Services\TenantService::class);
         $company = $tenantService->getCompany();
 
-        // Handle Period Selection
-        // Default to current month if not set, unless 'all' is explicitly requested or passed
         $selectedPeriod = $request->input('period');
 
         if (!$selectedPeriod) {
@@ -21,29 +19,23 @@ class DashboardController extends Controller
             session(['dashboard_period' => $selectedPeriod]);
         }
         $showAllTime = $selectedPeriod === 'all';
-
-        // Initialize empty collections
         $acts = collect();
         $wasteComposition = collect();
         $transferred = collect();
         $received = collect();
 
         if ($company) {
-            // Get all processed acts
+
             $allActs = \App\Models\Act::where('company_id', $company->id)
                 ->where('status', 'processed')
                 ->latest()
                 ->get();
-
-            // Filter acts by period
             $acts = $allActs->filter(function ($act) use ($selectedPeriod, $showAllTime) {
                 if ($showAllTime)
                     return true;
 
                 $data = $act->act_data;
                 $dateVal = $data['date'] ?? null;
-
-                // Determine Act Date
                 if ($dateVal) {
                     try {
                         $actDate = \Carbon\Carbon::parse($dateVal);
@@ -53,24 +45,20 @@ class DashboardController extends Controller
                 } else {
                     $actDate = $act->created_at;
                 }
-
-                // Parse Selected Period
                 if (strlen($selectedPeriod) === 4) {
-                    // Year (YYYY)
+
                     return $actDate->year == $selectedPeriod;
                 } elseif (str_contains($selectedPeriod, '-Q')) {
-                    // Quarter (YYYY-Qx)
+
                     $parts = explode('-Q', $selectedPeriod);
                     $year = $parts[0];
                     $quarter = $parts[1];
                     return $actDate->year == $year && $actDate->quarter == $quarter;
                 } else {
-                    // Month (YYYY-MM)
+
                     return $actDate->format('Y-m') === $selectedPeriod;
                 }
             });
-
-            // Process data for tables using ONLY the filtered acts
             foreach ($acts as $act) {
                 $data = $act->act_data;
                 if (!is_array($data) || empty($data['items']))
@@ -80,27 +68,17 @@ class DashboardController extends Controller
                 $receiver = $data['receiver'] ?? '';
                 $actNumber = empty($data['number']) ? 'б/н' : $data['number'];
                 $date = $data['date'] ?? $act->created_at->format('Y-m-d');
-
-                // Determine direction
-                // For demo purposes, we'll put everything in "Transferred" 
-
                 foreach ($data['items'] as $itemIndex => $item) {
                     $name = $item['name'] ?? 'Неизвестный отход';
                     $qty = (float) ($item['quantity'] ?? 0);
                     $unit = $item['unit'] ?? 'т';
 
-                    // Table 1: Composition (Unique list)
-                    // Table 1: Composition (Unique list)
                     if (!$wasteComposition->has($name)) {
                         $fkkoCode = $item['fkko_code'] ?? null;
                         $hazardClass = $item['hazard_class'] ?? null;
                         $fkko = null;
 
-                        // 1. Always try search to confirm or enrich
-                        // 2.1 Exact/Substring Match
                         $fkko = \App\Models\FkkoCode::where('name', 'like', '%' . $name . '%')->first();
-
-                        // 2.2 Keyword Match (if exact failed)
                         if (!$fkko) {
                             $words = explode(' ', $name);
                             $query = \App\Models\FkkoCode::query();
@@ -118,8 +96,6 @@ class DashboardController extends Controller
                                 $fkko = $query->first();
                             }
                         }
-
-                        // 2.3 First word match
                         if (!$fkko) {
                             $words = explode(' ', $name);
                             foreach ($words as $word) {
@@ -130,15 +106,11 @@ class DashboardController extends Controller
                                 }
                             }
                         }
-
-                        // Determine final values with fallback logic
-                        // Determine final values with fallback logic
-                        // If DB found something, use it (it's verified)
                         if ($fkko) {
                             $finalCode = $fkko->code;
                             $finalHazard = $fkko->hazard_class;
                         } elseif ($fkkoCode) {
-                            // If AI extracted a code, verify it exists in our DB
+
                             $fkkoFromAi = \App\Models\FkkoCode::where('code', $fkkoCode)->first();
                             if ($fkkoFromAi) {
                                 $finalCode = $fkkoFromAi->code;
@@ -147,7 +119,7 @@ class DashboardController extends Controller
                                 throw new \Exception("Ошибка в заполнении ФККО кода: код {$fkkoCode} не найден в базе данных. Пожалуйста, исправьте файл или свяжитесь с администрацией сайта.");
                             }
                         }
-                        // Manual overrides for known tough cases if DB fails (Simulate "Smart" behavior)
+
                         elseif (mb_stripos($name, 'пленка') !== false) {
                             $finalCode = '4 34 110 02 29 5'; // Code for Polyethylene film
                             $finalHazard = 5;
@@ -165,8 +137,6 @@ class DashboardController extends Controller
 
                     $operationType = $item['operation_type'] ?? 'Транспортирование';
 
-                    // Determine direction based on Company role or Operation Type
-                    // 1. Check if we correspond to Provider (Executor) or Receiver (Customer)
                     $isExecutor = false;
                     $isCustomer = false;
 
@@ -181,11 +151,7 @@ class DashboardController extends Controller
                             $isCustomer = true; // We are the Customer -> We Transfer Waste
                         }
                     }
-
-                    // 2. Logic to assign to Table 3 (Transferred) or Table 4 (Received)
                     $addedToReceived = false;
-
-                    // If we are definitely the Executor, we received the waste
                     if ($isExecutor) {
                         $received->push([
                             'id' => $act->id,
@@ -200,7 +166,7 @@ class DashboardController extends Controller
                         ]);
                         $addedToReceived = true;
                     }
-                    // If we are definitely the Customer, we transferred the waste
+
                     elseif ($isCustomer) {
                         $transferred->push([
                             'id' => $act->id,
@@ -214,12 +180,8 @@ class DashboardController extends Controller
                             'unit' => $unit
                         ]);
                     }
-                    // Fallback: Use Operation Type heuristics if we can't identify ourselves
+
                     else {
-                        // User hint: "Receiver is Executor because operation is Utilisation"
-                        // Interpretation: If operation is heavy (Util/Burial), assume we are properly dealing with it?
-                        // Or simple split for demo:
-                        // Let's bias towards populating Table 4 if it's Utilisation/Neutralization
                         if (in_array(mb_strtolower($operationType), ['утилизация', 'обезвреживание', 'захоронение'])) {
                             $received->push([
                                 'id' => $act->id,
@@ -251,32 +213,22 @@ class DashboardController extends Controller
         }
 
         $userCompanies = auth()->user()->companies;
-
-        // Generate periods for dropdown
         $periods = [];
-
-        // 1. Years (Current + Last)
         $now = now();
         $periods[$now->year] = $now->year . ' год';
         $periods[$now->year - 1] = ($now->year - 1) . ' год';
 
         $periods['divider1'] = '---'; // Divider logic in view
 
-        // 2. Quarters (Current Year + Last Year)
-        // Current Year Quarters
         for ($q = 1; $q <= 4; $q++) {
-            // Only show quarters that have started? Or all? Let's show all for planning/viewing.
-            // Or maybe only up to current quarter? User asked for "Quarter and Year".
             $periods[$now->year . '-Q' . $q] = $q . ' кв. ' . $now->year;
         }
-        // Last Year Quarters
+
         for ($q = 1; $q <= 4; $q++) {
             $periods[($now->year - 1) . '-Q' . $q] = $q . ' кв. ' . ($now->year - 1);
         }
 
         $periods['divider2'] = '---';
-
-        // 3. Months (Last 12)
         $current = now()->startOfMonth();
         for ($i = 0; $i < 12; $i++) {
             $periods[$current->format('Y-m')] = \Illuminate\Support\Str::ucfirst($current->translatedFormat('F Y'));
@@ -284,8 +236,6 @@ class DashboardController extends Controller
         }
 
         $wasteList = \App\Models\FkkoCode::orderBy('name')->pluck('name')->unique()->values();
-
-        // Check if this is an AJAX request to refresh tables
         if ($request->ajax() && $request->has('refresh_tables')) {
             return response()->json([
                 'table1_html' => view('partials.dashboard_table1', compact('wasteComposition'))->render(),

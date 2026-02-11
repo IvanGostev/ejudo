@@ -107,7 +107,7 @@ class UserResource extends Resource
                         ->sortable(),
                 ])
             ->filters([
-                    //
+
                 ])
             ->actions([
                     \Filament\Actions\EditAction::make()->label('Редактировать'),
@@ -122,7 +122,7 @@ class UserResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+
         ];
     }
 

@@ -44,13 +44,13 @@ class ReferralEarningResource extends Resource
                         ->sortable(),
                 ])
             ->filters([
-                    //
+
                 ])
             ->actions([
-                    //
+
                 ])
             ->bulkActions([
-                    //
+
                 ]);
     }
 

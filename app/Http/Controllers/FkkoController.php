@@ -16,8 +16,6 @@ class FkkoController extends Controller
             $results->where('code', 'like', "%{$query}%")
                 ->orWhere('name', 'like', "%{$query}%");
         }
-
-        // Limit results for performance
         $data = $results->limit(50)->get();
 
         return response()->json($data);

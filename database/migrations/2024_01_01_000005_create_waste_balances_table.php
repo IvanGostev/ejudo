@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->timestamps();
 
             $table->unique(['company_id', 'fkko_code', 'period'], 'uk_waste_period');
-            // Optimistic FK to fkko_codes (assuming it's in the same DB now)
+
             $table->foreign('fkko_code')->references('code')->on('fkko_codes');
         });
     }

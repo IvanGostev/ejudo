@@ -27,8 +27,6 @@ class TinkoffPaymentService
     {
         $amountKopecks = (int) ($payment->amount * 100);
 
-        // Create Receipt Data
-        // Ideally Taxation should be configurable. Defaulting to 'usn_income' (Simplified DB).
         $receipt = [
             'Email' => $payment->user->email ?? 'unknown@example.com',
             'Taxation' => 'usn_income',
@@ -44,20 +42,14 @@ class TinkoffPaymentService
                 ]
             ]
         ];
-
-
         $params = [
             'TerminalKey' => $this->terminalId,
             'Amount' => $amountKopecks,
             'OrderId' => $payment->id . '_' . time(),
             'Description' => 'Подписка eJydo',
             'NotificationURL' => route('subscription.webhook'),
-            // 'SuccessURL' => route('payment.success'), // Can be passed here or set in terminal settings
-            // 'FailURL'    => route('payment.fail'),
             'Receipt' => $receipt
         ];
-
-        // Add specific URLs if needed, often handy to override defaults
         $params['SuccessURL'] = route('subscription.index'); // Fallback/Standard
         if (\Route::has('subscription.success')) {
             $params['SuccessURL'] = route('subscription.success');
@@ -150,9 +142,7 @@ class TinkoffPaymentService
                 if (is_bool($value)) {
                     $value = $value ? 'true' : 'false';
                 }
-                // Determine if we need to convert value to string? 
-                // PHP does it implicitly but strict typing might matter.
-                // Tinkoff expects string concatenation.
+
                 $tokenStr .= (string) $value;
             }
         }
@@ -170,8 +160,6 @@ class TinkoffPaymentService
         }
 
         $receivedToken = $requestData['Token'];
-
-        // Remove Token from args to recalculate
         $args = $requestData;
         unset($args['Token']);
 

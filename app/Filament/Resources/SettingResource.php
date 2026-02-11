@@ -58,7 +58,7 @@ class SettingResource extends Resource
                         ->toggleable(isToggledHiddenByDefault: true),
                 ])
             ->filters([
-                    //
+
                 ])
             ->actions([
                     \Filament\Actions\EditAction::make(),
@@ -74,7 +74,7 @@ class SettingResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+
         ];
     }
 

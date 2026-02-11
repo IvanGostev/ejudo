@@ -35,8 +35,6 @@ class SubscriptionController extends Controller
     public function create(Request $request, \App\Services\TinkoffPaymentService $tinkoff)
     {
         $amount = (float) (\App\Models\Setting::where('key', 'subscription_price')->value('value') ?? 5000.00);
-
-
         $payment = Payment::create([
             'user_id' => auth()->id(),
             'company_id' => null,
@@ -89,15 +87,11 @@ class SubscriptionController extends Controller
         $paymentId = $request->input('PaymentId');
         $status = $request->input('Status');
         $orderId = $request->input('OrderId');
-
-
         $payment = Payment::find($orderId);
         if (!$payment) {
             Log::error('TBank Webhook: Payment not found for OrderId: ' . $orderId);
             return response('OK', 200);
         }
-
-
         if ($status === 'AUTHORIZED') {
             Log::info('Payment Authorized, Capturing...', ['PaymentId' => $paymentId]);
             $confirm = $tinkoff->confirm($paymentId);
@@ -132,8 +126,6 @@ class SubscriptionController extends Controller
                     }
                     $user->update(['subscription_ends_at' => $newExpires]);
                     Log::info('Subscription Extended', ['user_id' => $user->id]);
-
-                    // Referral Logic
                     $this->processReferral($payment);
                 }
             }
@@ -162,8 +154,6 @@ class SubscriptionController extends Controller
         if ($earningAmount <= 0) {
             return;
         }
-
-        // Create earning record
         \App\Models\ReferralEarning::create([
             'user_id' => $referrer->id,
             'referral_id' => $user->id,
@@ -171,8 +161,6 @@ class SubscriptionController extends Controller
             'amount' => $earningAmount,
             'percent' => $referralPercent,
         ]);
-
-        // Update referrer's balance
         $referrer->increment('referral_balance', $earningAmount);
 
         Log::info('Referral Earning Processed', [

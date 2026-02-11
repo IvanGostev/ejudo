@@ -53,8 +53,6 @@ class CompanyController extends Controller
         ], $messages);
 
         $company = $user->companies()->create($validated);
-
-        // Auto-select the newly created company
         app(\App\Services\TenantService::class)->setCompany($company);
 
         return redirect()->route('dashboard')->with('success', 'Компания успешно добавлена и выбрана');

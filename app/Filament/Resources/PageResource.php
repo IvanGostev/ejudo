@@ -31,9 +31,7 @@ class PageResource extends Resource
                         ->maxLength(255)
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn($state, $component) => $component->getContainer()->getComponent(fn($c) => $c->getName() === 'slug')?->state(Str::slug($state))),
-                    // Note: accessing other components in Schema builder might be different. 
-                    // Simpler: Just make slug required and manual if auto-complete is complex in this version.
-                    // Or rely on standard behavior. Let's try simple first.
+
                     Forms\Components\TextInput::make('slug')
                         ->label('URL (slug)')
                         ->required()
@@ -62,7 +60,7 @@ class PageResource extends Resource
                         ->toggleable(isToggledHiddenByDefault: true),
                 ])
             ->filters([
-                    //
+
                 ])
             ->actions([
                     \Filament\Actions\EditAction::make()->label('Редактировать'),
@@ -77,7 +75,7 @@ class PageResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+
         ];
     }
 

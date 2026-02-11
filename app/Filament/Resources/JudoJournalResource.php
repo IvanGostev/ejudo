@@ -54,7 +54,7 @@ class JudoJournalResource extends Resource
                         ->label('Скачан'),
                     Forms\Components\KeyValue::make('table1_data')
                         ->label('Таблица 1 (Состав)'),
-                    // Only showing minimal JSON fields to avoid overwhelming the form, complex data editing might be better customized later
+
                 ]);
     }
 
@@ -81,7 +81,7 @@ class JudoJournalResource extends Resource
                         ->sortable(),
                 ])
             ->filters([
-                    //
+
                 ])
             ->actions([
                     \Filament\Actions\EditAction::make()->label('Редактировать'),
@@ -96,7 +96,7 @@ class JudoJournalResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+
         ];
     }
 

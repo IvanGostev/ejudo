@@ -32,15 +32,13 @@ class ProfileController extends Controller
         }
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($user, $amount, $request) {
-            // Create payout request
+
             $user->referralPayouts()->create([
                 'amount' => $amount,
                 'status' => 'pending',
                 'payment_method' => $request->payment_method,
                 'payment_details' => $request->payment_details,
             ]);
-
-            // Deduct from balance
             $user->decrement('referral_balance', $amount);
         });
 

@@ -71,7 +71,7 @@ class FkkoCodeResource extends Resource
                         ->boolean(),
                 ])
             ->filters([
-                    //
+
                 ])
             ->actions([
                     \Filament\Actions\EditAction::make()->label('Редактировать'),
@@ -87,7 +87,7 @@ class FkkoCodeResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+
         ];
     }
 
