@@ -88,7 +88,7 @@
                                     <th>Номер акта</th>
                                     <th>Поставщик</th>
                                     <th>Получатель</th>
-                                    <th width="120">Действие</th>
+                                    <th width="200">Действие</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -114,9 +114,17 @@
                                                 data-field="receiver">{{ $actData['receiver'] ?? 'Не указано' }}</span>
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-open toggle-expand" data-act-id="{{ $act->id }}">
-                                                <i class="bi bi-chevron-down"></i> Открыть
-                                            </button>
+                                            <div class="d-flex gap-3">
+                                                <button class="btn btn-sm btn-open toggle-expand"
+                                                    data-act-id="{{ $act->id }}">
+                                                    <i class="bi bi-chevron-down"></i> Открыть
+                                                </button>
+                                                <button class="btn btn-sm delete-act"
+                                                    style="background-color: #000; border-color: #000; color: #fff;"
+                                                    data-act-id="{{ $act->id }}">
+                                                    <i class="bi bi-trash"></i> Удалить
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr class="expanded-content" id="expanded-{{ $act->id }}">
@@ -160,8 +168,7 @@
                                                                     <th>Наименование</th>
                                                                     <th>Код ФККО</th>
                                                                     <th>Класс</th>
-                                                                    <th>Количество</th>
-                                                                    <th>Ед. изм.</th>
+                                                                    <th>Количество (т)</th>
                                                                     <th>Вид обращения</th>
                                                                 </tr>
                                                             </thead>
@@ -189,7 +196,6 @@
                                                                                 data-act-id="{{ $act->id }}"
                                                                                 data-field="items.{{ $index }}.quantity">{{ $item['quantity'] ?? '' }}</span>
                                                                         </td>
-                                                                        <td>{{ $item['unit'] ?? 'т' }}</td>
                                                                         <td>
                                                                             <span class="editable-field" contenteditable="true"
                                                                                 data-act-id="{{ $act->id }}"
@@ -388,6 +394,39 @@
                     e.preventDefault();
                     $(this).blur();
                 }
+            });
+
+            // Delete act
+            $('.delete-act').on('click', function (e) {
+                e.stopPropagation();
+                const actId = $(this).data('act-id');
+
+                if (!confirm('Вы уверены, что хотите удалить этот акт? Это действие нельзя отменить.')) {
+                    return;
+                }
+
+                $.ajax({
+                    url: '/acts/' + actId,
+                    method: 'DELETE',
+                    success: function (response) {
+                        // Remove both the main row and expanded row
+                        $('tr[data-act-id="' + actId + '"]').fadeOut(300, function () {
+                            $(this).remove();
+                        });
+                        $('#expanded-' + actId).fadeOut(300, function () {
+                            $(this).remove();
+                        });
+
+                        // Show success message
+                        if ($('tbody tr.act-row').length === 0) {
+                            location.reload();
+                        }
+                    },
+                    error: function (xhr) {
+                        alert('Ошибка при удалении акта');
+                        console.error(xhr);
+                    }
+                });
             });
         });
     </script>

@@ -205,8 +205,8 @@ class JournalController extends Controller
             $provName = mb_strtolower($provider);
             $recvName = mb_strtolower($receiver);
 
-            $isWasteRecipient = (mb_strpos($provName, $compName) !== false);
-            $isWasteGenerator = (mb_strpos($recvName, $compName) !== false);
+            $isWasteGenerator = (mb_strpos($provName, $compName) !== false);
+            $isWasteRecipient = (mb_strpos($recvName, $compName) !== false);
             $isInternal = ($isWasteRecipient && $isWasteGenerator);
 
             foreach ($items as $item) {
@@ -238,7 +238,7 @@ class JournalController extends Controller
                     $table3_data[] = [
                         'date' => $date,
                         'number' => $actNumber,
-                        'counterparty' => $provider,
+                        'counterparty' => $receiver,
                         'waste' => $name,
                         'fkko' => $fkko,
                         'hazard' => $hazard,
@@ -250,7 +250,7 @@ class JournalController extends Controller
                     $table4_data[] = [
                         'date' => $date,
                         'number' => $actNumber,
-                        'counterparty' => $receiver,
+                        'counterparty' => $provider,
                         'waste' => $name,
                         'fkko' => $fkko,
                         'hazard' => $hazard,
@@ -637,9 +637,7 @@ class JournalController extends Controller
 
                         if (mb_strpos($val, 'Ларин') !== false) {
                             $cell->setValue(str_replace('Ларин И.А.', $company->contact_person ?? '', $val));
-                        }
-
-                        elseif (mb_strpos($val, 'Руководитель') !== false) {
+                        } elseif (mb_strpos($val, 'Руководитель') !== false) {
 
                         }
                     }
@@ -738,7 +736,6 @@ class JournalController extends Controller
                 'fkko',
                 'hazard',
                 'amount',
-                'p_transf',
                 'p_process',
                 'p_util',
                 'p_neutr',

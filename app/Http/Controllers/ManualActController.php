@@ -71,8 +71,6 @@ class ManualActController extends Controller
             'processing_result' => $actData,
         ]);
 
-        $period = date('Y-m', strtotime($request->date));
-
-        return redirect()->route('dashboard', ['period' => $period])->with('success', 'Акт успешно добавлен вручную');
+        return redirect()->route('acts.archive')->with('success', 'Акт успешно добавлен вручную');
     }
 }

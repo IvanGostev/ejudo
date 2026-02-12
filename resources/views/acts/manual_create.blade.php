@@ -17,15 +17,7 @@
                         <h5 class="mb-0 fw-bold">Ручное добавление акта</h5>
                     </div>
                     <div class="card-body p-4">
-                        @if ($errors->any())
-                            <div class="alert alert-danger">
-                                <ul class="mb-0">
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
+
 
                         <form action="{{ route('acts.manual.store') }}" method="POST">
                             @csrf
@@ -154,6 +146,13 @@
                                                     <label class="form-check-label" for="temp-op5">Обработка</label>
                                                 </div>
                                             </div>
+                                            <div class="col-md-4 col-6 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="temp-op6"
+                                                        value="Размещение">
+                                                    <label class="form-check-label" for="temp-op6">Размещение</label>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div class="form-text">Выберите одно или несколько действий, совершаемых с отходом.
                                         </div>
@@ -234,6 +233,11 @@
             wasteItems.push(wasteItem);
             renderWasteItems();
             resetWasteForm();
+
+            const errorAlert = document.querySelector('.alert-danger');
+            if (errorAlert) {
+                errorAlert.style.display = 'none';
+            }
         }
 
         function removeWasteItem(id) {
@@ -252,32 +256,32 @@
             let html = '';
             wasteItems.forEach((item, index) => {
                 html += `
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-2">${index + 1}. ${item.name}</h6>
-                                            <div class="small text-muted mb-2">
-                                                <strong>Код ФККО:</strong> ${item.fkko_code} | 
-                                                <strong>Класс опасности:</strong> ${item.hazard_class} | 
-                                                <strong>Количество:</strong> ${item.amount} т
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-2">${index + 1}. ${item.name}</h6>
+                                                    <div class="small text-muted mb-2">
+                                                        <strong>Код ФККО:</strong> ${item.fkko_code} | 
+                                                        <strong>Класс опасности:</strong> ${item.hazard_class} | 
+                                                        <strong>Количество:</strong> ${item.amount} т
+                                                    </div>
+                                                    <div class="small">
+                                                        <strong>Вид обращения:</strong> ${item.operation_types.join(', ')}
+                                                    </div>
+                                                    <input type="hidden" name="wastes[${index}][name]" value="${item.name}">
+                                                    <input type="hidden" name="wastes[${index}][fkko_code]" value="${item.fkko_code}">
+                                                    <input type="hidden" name="wastes[${index}][hazard_class]" value="${item.hazard_class}">
+                                                    <input type="hidden" name="wastes[${index}][amount]" value="${item.amount}">
+                                                    <input type="hidden" name="wastes[${index}][operation_types]" value="${item.operation_types.join(', ')}">
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-danger ms-3" onclick="removeWasteItem(${item.id})">
+                                                    <i class="bi bi-trash"></i> Удалить
+                                                </button>
                                             </div>
-                                            <div class="small">
-                                                <strong>Вид обращения:</strong> ${item.operation_types.join(', ')}
-                                            </div>
-                                            <input type="hidden" name="wastes[${index}][name]" value="${item.name}">
-                                            <input type="hidden" name="wastes[${index}][fkko_code]" value="${item.fkko_code}">
-                                            <input type="hidden" name="wastes[${index}][hazard_class]" value="${item.hazard_class}">
-                                            <input type="hidden" name="wastes[${index}][amount]" value="${item.amount}">
-                                            <input type="hidden" name="wastes[${index}][operation_types]" value="${item.operation_types.join(', ')}">
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-outline-danger ms-3" onclick="removeWasteItem(${item.id})">
-                                            <i class="bi bi-trash"></i> Удалить
-                                        </button>
                                     </div>
-                                </div>
-                            </div>
-                        `;
+                                `;
             });
 
             container.innerHTML = html;
@@ -336,11 +340,11 @@
                                     a.href = '#';
                                     a.className = 'list-group-item list-group-item-action py-2';
                                     a.innerHTML = `
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <div class="small fw-bold text-wrap" style="max-width: 80%;">${item.name}</div>
-                                                        <span class="badge bg-primary ms-2">${item.code}</span>
-                                                    </div>
-                                                `;
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <div class="small fw-bold text-wrap" style="max-width: 80%;">${item.name}</div>
+                                                                <span class="badge bg-primary ms-2">${item.code}</span>
+                                                            </div>
+                                                        `;
                                     a.onclick = (e) => {
                                         e.preventDefault();
 

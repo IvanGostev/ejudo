@@ -154,37 +154,47 @@
             <div class="collapse navbar-collapse" id="topNavbar">
                 @auth
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a href="{{ route('dashboard') }}"
-                            class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                            Загрузка Актов
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {{ request()->routeIs('dashboard') || request()->routeIs('acts.*') ? 'active' : '' }}" 
+                           href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            АКТЫ
                         </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('acts.archive') ? 'active' : '' }}" 
+                                   href="{{ route('acts.archive') }}">
+                                    ВСЕ АКТЫ
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('dashboard') ? 'active' : '' }}" 
+                                   href="{{ route('dashboard') }}">
+                                    ЗАГРУЗИТЬ АКТ
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('journal.index') ? 'active' : '' }}"
+                            href="{{ route('journal.index') }}">ЖУРНАЛ ОТХОДОВ</a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('companies.index') }}"
                             class="nav-link {{ request()->routeIs('companies.*') ? 'active' : '' }}">
-                            Мои компании
+                            КОМПАНИИ
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('profile.index') ? 'active' : '' }}"
-                            href="{{ route('profile.index') }}">Профиль</a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('subscription.index') ? 'active' : '' }}"
-                            href="{{ route('subscription.index') }}">Тарифы</a>
+                            href="{{ route('subscription.index') }}">ТАРИФЫ</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('journal.index') ? 'active' : '' }}"
-                            href="{{ route('journal.index') }}">Формирование ЖУДО</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('acts.archive') ? 'active' : '' }}"
-                            href="{{ route('acts.archive') }}">Архив актов</a>
+                        <a class="nav-link {{ request()->routeIs('profile.index') ? 'active' : '' }}"
+                            href="{{ route('profile.index') }}">ПРОФИЛЬ</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('instruction.index') ? 'active' : '' }}"
-                            href="{{ route('instruction.index') }}">Инструкция</a>
+                            href="{{ route('instruction.index') }}">ПОМОЩЬ</a>
                     </li>
                 </ul>
                 @else
