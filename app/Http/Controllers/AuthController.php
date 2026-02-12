@@ -131,7 +131,7 @@ class AuthController extends Controller
 
         $request->validate([
             'name' => 'required|string',
-            'inn' => 'required|string|size:10,12', // 10 for Juridical, 12 for IP (though strict validation varies)
+            'inn' => 'required|string|size:10,12',
             'type' => 'required|in:ООО,ИП',
             'ogrn' => 'required|string',
             'legal_address' => 'required|string',

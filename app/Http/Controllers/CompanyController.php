@@ -32,7 +32,7 @@ class CompanyController extends Controller
             'ogrn.min' => 'Введите все символы',
             'ogrn.max' => 'Введите все символы',
             'kpp.max' => 'Введите все символы',
-            'kpp.min' => 'Введите все символы', // in case we add min later
+            'kpp.min' => 'Введите все символы',
             'name.required' => 'Введите название компании',
             'inn.required' => 'Введите ИНН',
             'ogrn.required' => 'Введите ОГРН',

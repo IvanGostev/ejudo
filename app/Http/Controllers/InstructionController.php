@@ -13,7 +13,7 @@ class InstructionController extends Controller
         $company = $tenantService->getCompany();
 
         $steps = [
-            'registration' => true, // User is here, so registered
+            'registration' => true,
             'create_company' => $user->companies()->count() > 0,
             'select_company' => $company !== null,
             'upload_acts' => $company ? \App\Models\Act::where('company_id', $company->id)->exists() : false,

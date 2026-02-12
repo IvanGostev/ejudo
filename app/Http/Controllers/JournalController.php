@@ -115,14 +115,14 @@ class JournalController extends Controller
         $prevJournal = \App\Models\JudoJournal::where('company_id', $company->id)
             ->where('period', '<', $startDate->format('Y-m-d'))
             ->where('role', $roleKey)
-            ->orderBy('period', 'desc') // Сначала последние
+            ->orderBy('period', 'desc')
             ->first();
 
         $allPrev = \App\Models\JudoJournal::where('company_id', $company->id)
             ->where('period', '<', $startDate->format('Y-m-d'))
             ->where('role', $roleKey)
             ->orderBy('period', 'desc')
-            ->limit(10) // Оптимизация
+            ->limit(10)
             ->get();
 
         $validPrevJournal = null;
@@ -433,7 +433,7 @@ class JournalController extends Controller
         $journal = \App\Models\JudoJournal::where('company_id', $company->id)->findOrFail($id);
 
         $table = $request->table;
-        $data = $journal->$table; // Получение текущего JSON массива
+        $data = $journal->$table;
 
         $extraUpdates = [];
 
@@ -492,7 +492,7 @@ class JournalController extends Controller
                 return response()->json(['success' => true, 'action' => 'deleted']);
             }
 
-            $journal->$table = $data; // Сохранение изменений
+            $journal->$table = $data;
             $journal->save();
             return response()->json(['success' => true, 'updates' => $extraUpdates]);
         }
@@ -576,12 +576,12 @@ class JournalController extends Controller
             $html = view('journal.pdf', compact('journal', 'company', 'periodStr', 'table1', 'table2', 'table3', 'table4'))->render();
             $mpdf = new \Mpdf\Mpdf([
                 'mode' => 'utf-8',
-                'format' => 'A4-L', // Landscape A4
+                'format' => 'A4-L',
                 'margin_left' => 10,
                 'margin_right' => 10,
                 'margin_top' => 10,
                 'margin_bottom' => 10,
-                'default_font' => 'DejaVuSans' // Supports Cyrillic
+                'default_font' => 'DejaVuSans'
             ]);
 
             $mpdf->WriteHTML($html);
@@ -612,7 +612,7 @@ class JournalController extends Controller
             $spreadsheet = $reader->load($templatePath);
 
             $periodDate = \Carbon\Carbon::parse($journal->period);
-            $periodStr = \Illuminate\Support\Str::ucfirst($periodDate->translatedFormat('F Y')); // Месяц по умолчанию
+            $periodStr = \Illuminate\Support\Str::ucfirst($periodDate->translatedFormat('F Y'));
 
             if ($journal->type === 'year') {
                 $periodStr = $periodDate->year;
@@ -653,7 +653,7 @@ class JournalController extends Controller
                     foreach ($row->getCellIterator() as $cell) {
 
                         if (trim($cell->getValue()) === '1') {
-                            $startRow = $row->getRowIndex() + 1; // Вставка ПОСЛЕ этой строки
+                            $startRow = $row->getRowIndex() + 1;
                             break 2;
                         }
                     }
@@ -663,7 +663,7 @@ class JournalController extends Controller
                 $rowNum = 1;
 
                 foreach ($data as $item) {
-                    $sheet->setCellValue('B' . $r, $rowNum++); // Предполагаем, что колонка B обычно ID
+                    $sheet->setCellValue('B' . $r, $rowNum++);
 
                     $colIndex = 'C';
 
@@ -690,7 +690,7 @@ class JournalController extends Controller
             $populateTable(1, $journal->table1_data ?? [], ['name', 'fkko', 'hazard']);
             $t2_data = collect($journal->table2_data)->map(function ($item) {
                 $item['rec_copy'] = $item['received'];
-                $item['storage'] = 0; // Предполагаем отсутствие хранения
+                $item['storage'] = 0;
                 return $item;
             })->toArray();
 
@@ -740,7 +740,7 @@ class JournalController extends Controller
                 'p_util',
                 'p_neutr',
                 'p_store',
-                'p_bury', // G, H, I, J, K, L (6 cols)
+                'p_bury',
                 'counterparty',
                 'number',
                 'validity'
@@ -769,7 +769,7 @@ class JournalController extends Controller
                 'fkko',
                 'hazard',
                 'amount',
-                'p_transf', // Внимание: в Таблице 4 шаблона может не быть этой колонки.
+                'p_transf',
 
                 'p_process',
                 'p_util',

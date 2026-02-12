@@ -342,7 +342,6 @@
 @push('scripts')
     <script>
         $(document).ready(function () {
-            // Toggle expand/collapse
             $('.toggle-expand').on('click', function (e) {
                 e.stopPropagation();
                 const actId = $(this).data('act-id');
@@ -360,7 +359,6 @@
                 }
             });
 
-            // Editable fields
             $('.editable-field').on('blur', function () {
                 const actId = $(this).data('act-id');
                 const field = $(this).data('field');
@@ -374,7 +372,6 @@
                         value: value
                     },
                     success: function (response) {
-                        // Show success feedback
                         const originalBg = $(this).css('background-color');
                         $(this).css('background-color', '#d4edda');
                         setTimeout(() => {
@@ -388,7 +385,6 @@
                 });
             });
 
-            // Prevent form submission on Enter
             $('.editable-field').on('keydown', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -396,7 +392,6 @@
                 }
             });
 
-            // Delete act
             $('.delete-act').on('click', function (e) {
                 e.stopPropagation();
                 const actId = $(this).data('act-id');
@@ -409,7 +404,6 @@
                     url: '/acts/' + actId,
                     method: 'DELETE',
                     success: function (response) {
-                        // Remove both the main row and expanded row
                         $('tr[data-act-id="' + actId + '"]').fadeOut(300, function () {
                             $(this).remove();
                         });
@@ -417,7 +411,6 @@
                             $(this).remove();
                         });
 
-                        // Show success message
                         if ($('tbody tr.act-row').length === 0) {
                             location.reload();
                         }

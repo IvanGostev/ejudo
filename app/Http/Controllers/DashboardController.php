@@ -121,7 +121,7 @@ class DashboardController extends Controller
                         }
 
                         elseif (mb_stripos($name, 'пленка') !== false) {
-                            $finalCode = '4 34 110 02 29 5'; // Code for Polyethylene film
+                            $finalCode = '4 34 110 02 29 5';
                             $finalHazard = 5;
                         } else {
                             $finalCode = '?';
@@ -146,9 +146,9 @@ class DashboardController extends Controller
                         $recvName = mb_strtolower($receiver);
 
                         if (mb_strpos($provName, $compName) !== false || mb_strpos($compName, $provName) !== false) {
-                            $isExecutor = true; // We are the Service Provider -> We Receive Waste
+                            $isExecutor = true;
                         } elseif (mb_strpos($recvName, $compName) !== false || mb_strpos($compName, $recvName) !== false) {
-                            $isCustomer = true; // We are the Customer -> We Transfer Waste
+                            $isCustomer = true;
                         }
                     }
                     $addedToReceived = false;
@@ -158,7 +158,7 @@ class DashboardController extends Controller
                             'item_index' => $itemIndex,
                             'date' => $date,
                             'number' => $actNumber,
-                            'counterparty' => $receiver, // From Customer
+                            'counterparty' => $receiver,
                             'counterparty_field' => 'receiver',
                             'waste' => $name,
                             'amount' => $qty,
@@ -173,7 +173,7 @@ class DashboardController extends Controller
                             'item_index' => $itemIndex,
                             'date' => $date,
                             'number' => $actNumber,
-                            'counterparty' => $provider, // To Provider
+                            'counterparty' => $provider,
                             'counterparty_field' => 'provider',
                             'waste' => $name,
                             'amount' => $qty,
@@ -188,7 +188,7 @@ class DashboardController extends Controller
                                 'item_index' => $itemIndex,
                                 'date' => $date,
                                 'number' => $actNumber,
-                                'counterparty' => $receiver, // Who gave it to us (Customer)
+                                'counterparty' => $receiver,
                                 'counterparty_field' => 'receiver',
                                 'waste' => $name,
                                 'amount' => $qty,
@@ -200,7 +200,7 @@ class DashboardController extends Controller
                                 'item_index' => $itemIndex,
                                 'date' => $date,
                                 'number' => $actNumber,
-                                'counterparty' => $provider, // Who we gave it to
+                                'counterparty' => $provider,
                                 'counterparty_field' => 'provider',
                                 'waste' => $name,
                                 'amount' => $qty,
@@ -218,7 +218,7 @@ class DashboardController extends Controller
         $periods[$now->year] = $now->year . ' год';
         $periods[$now->year - 1] = ($now->year - 1) . ' год';
 
-        $periods['divider1'] = '---'; // Divider logic in view
+        $periods['divider1'] = '---';
 
         for ($q = 1; $q <= 4; $q++) {
             $periods[$now->year . '-Q' . $q] = $q . ' кв. ' . $now->year;

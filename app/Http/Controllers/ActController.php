@@ -132,15 +132,15 @@ class ActController extends Controller
 
         $field = $request->input('field');
         $value = $request->input('value');
-        $itemIndex = $request->input('item_index'); // This will be null if not provided, or an integer
+        $itemIndex = $request->input('item_index');
         if (in_array($field, ['date', 'number', 'provider', 'receiver'])) {
 
             if (isset($data['items']) && count($data['items']) > 1 && $itemIndex !== null && isset($data['items'][$itemIndex])) {
 
                 $newAct = $act->replicate();
-                $newAct->status = 'processed'; // Ensure status is correct for new act
-                $newDataForNewAct = $data; // Start with a copy of the original act_data
-                $targetItem = $data['items'][$itemIndex]; // Get the item to be moved
+                $newAct->status = 'processed';
+                $newDataForNewAct = $data;
+                $targetItem = $data['items'][$itemIndex];
                 $newDataForNewAct['items'] = [$targetItem];
 
                 $newDataForNewAct[$field] = $value;
@@ -155,7 +155,7 @@ class ActController extends Controller
                     'success' => true,
                     'split' => true,
                     'new_act_id' => $newAct->id,
-                    'new_item_index' => 0 // The moved item is now the first (and only) item in the new act
+                    'new_item_index' => 0
                 ]);
             }
 
