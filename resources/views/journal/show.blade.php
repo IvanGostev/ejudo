@@ -10,7 +10,6 @@
         if (($journal->type ?? 'month') === 'quarter') {
             $q = ceil($periodDate->month / 3);
             $periodStr = $q . ' квартал ' . $periodDate->year . ' года';
-            // Period stored is start of the quarter
             $endDate = $periodDate->copy()->addMonths(2)->endOfMonth();
         } elseif (($journal->type ?? 'month') === 'year') {
             $periodStr = $periodDate->year . ' год';
@@ -370,24 +369,18 @@
         const wasteOptions = @json($wastes ?? []);
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Функция пересчета итогов
             const recalculateTotal = (tableName) => {
                 const totalCell = document.getElementById(`total-${tableName}`);
                 if (!totalCell) return;
 
                 let total = 0;
                 document.querySelectorAll(`td[data-table="${tableName}"][data-column="amount"]`).forEach(td => {
-                    // Удаляем пробелы и запятые (разделители тысяч) перед парсингом. Десятичный разделитель - точка.
                     let raw = td.innerText.replace(/,/g, '').trim(); 
                     let val = parseFloat(raw) || 0;
                     total += val;
                 });
 
-                // Форматирование: до 3 знаков, удаление лишних нулей
-                // Для итогов разделитель тысяч тоже может быть полезен, но пока вернем просто число или отформатированное
-                // number_format в JS аналог:
                 let s = total.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 3});
-                // toLocaleString('en-US') использует запятые как разделители тысяч и точку как десятичный.
                 
                 s = s.replace(/\.?0+$/, '');
                 totalCell.innerText = s;
@@ -397,18 +390,15 @@
                 const tableBody = row.closest('tbody');
                 row.remove();
                 
-                // Перенумерация строк и обновление индексов data-row
                 let rowNum = 1;
                 let dataRowIndex = 0;
                 tableBody.querySelectorAll('tr').forEach(tr => {
-                    // Пропускаем строки без обычных ячеек (например, "Итого" с colspan)
                     const firstCell = tr.cells[0];
                     if (firstCell && !firstCell.hasAttribute('colspan')) {
                         const numSpan = firstCell.querySelector('.row-number');
                         if (numSpan) numSpan.innerText = rowNum++;
-                        else firstCell.innerText = rowNum++; // Fallback
+                        else firstCell.innerText = rowNum++;
                         
-                        // Обновляем индекс строки для будущих запросов (включая кнопку удаления)
                         tr.querySelectorAll('[data-row]').forEach(el => {
                             el.dataset.row = dataRowIndex;
                         });
@@ -419,7 +409,6 @@
                 recalculateTotal(tableName);
             };
 
-            // Обработчик кнопки удаления
             document.body.addEventListener('click', async function(e) {
                 const btn = e.target.closest('.delete-row-btn');
                 if (!btn) return;
@@ -441,7 +430,7 @@
                         body: JSON.stringify({
                             table: table,
                             row_index: rowIndex,
-                            column: 'amount', // Установка 0 triggers deletion
+                            column: 'amount',
                             value: 0
                         })
                     });
@@ -470,12 +459,10 @@
                     const originalValue = this.innerText.trim();
                     let input;
 
-                    // Логика выпадающего списка отходов
                     if (column === 'waste') {
                         input = document.createElement('select');
                         input.className = 'form-select form-select-sm p-0 border-0 shadow-none bg-transparent';
                         
-                        // Заполнение опций
                         let found = false;
                         wasteOptions.forEach(w => {
                             const opt = document.createElement('option');
@@ -488,7 +475,6 @@
                             input.appendChild(opt);
                         });
                         
-                        // Сохранение исходного значения, если его нет в списке
                         if (!found && originalValue) {
                             const opt = document.createElement('option');
                             opt.value = originalValue;
@@ -521,12 +507,10 @@
                             input.appendChild(opt);
                         }
                     } else {
-                        // Стандартное поле ввода
                         input = document.createElement('input');
                         input.type = 'text';
                         input.value = originalValue;
                         input.className = 'form-control form-control-sm p-0 border-0 shadow-none bg-transparent';
-                        // Сохранение выравнивания
                         if (this.classList.contains('text-start')) {
                             input.classList.add('text-start');
                         } else {
@@ -569,20 +553,16 @@
                             
                             const data = await response.json();
                             
-                            // Проверка на удаление строки
                             if (data.action === 'deleted') {
                                 handleRowDeletion(this.closest('tr'), this.dataset.table);
                                 return;
                             }
                             
-                            // Обновление интерфейса
                             this.innerHTML = newValue;
                             
-                            // Визуальное подтверждение успеха
                             this.classList.add('bg-success-subtle');
                             setTimeout(() => this.classList.remove('bg-success-subtle'), 1000);
 
-                            // Обработка дополнительных обновлений
                             if (data.updates) {
                                 const row = this.closest('tr');
                                 for (const [key, val] of Object.entries(data.updates)) {
@@ -595,7 +575,6 @@
                                 }
                             }
                             
-                            // Пересчет итогов
                             recalculateTotal(this.dataset.table);
 
                         } catch (e) {

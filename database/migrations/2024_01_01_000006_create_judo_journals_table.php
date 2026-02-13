@@ -12,10 +12,10 @@ return new class extends Migration {
             $table->date('period');
             $table->foreignId('company_id')->constrained('user_companies')->onDelete('cascade');
             $table->enum('role', ['waste_generator', 'waste_processor']);
-            $table->json('table1_data'); // Composition
-            $table->json('table2_data'); // Summary
-            $table->json('table3_data'); // Transferred
-            $table->json('table4_data'); // Received
+            $table->json('table1_data');
+            $table->json('table2_data');
+            $table->json('table3_data');
+            $table->json('table4_data');
             $table->string('pdf_path', 500)->nullable();
             $table->boolean('is_paid')->default(false);
             $table->dateTime('downloaded_at')->nullable();

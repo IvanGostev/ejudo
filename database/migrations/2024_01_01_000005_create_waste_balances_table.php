@@ -11,7 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('company_id')->constrained('user_companies')->onDelete('cascade');
             $table->string('fkko_code', 50);
-            $table->date('period'); // Reporting period
+            $table->date('period');
             $table->decimal('quantity', 10, 3)->default(0);
             $table->string('unit', 20)->default('т');
             $table->timestamps();

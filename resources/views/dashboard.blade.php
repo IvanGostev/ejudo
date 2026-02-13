@@ -227,7 +227,6 @@
 @push('scripts')
     <script>
         $(document).ready(function () {
-            // Inject Styles
             $('<style>').prop('type', 'text/css').html(`
                 .editable-cell {
                     position: relative;
@@ -283,7 +282,6 @@
                 function handleFiles(files) {
                     if (files.length > 0) {
                         const formData = new FormData();
-                        // Append files
                         for (let i = 0; i < files.length; i++) {
                             formData.append('files[]', files[i]);
                         }
@@ -298,10 +296,8 @@
                             contentType: false,
                             success: function (response) {
                                 if (response.processed.length > 0) {
-                                    // Reload to update tables
                                     location.reload();
                                 } else {
-                                    // Show errors if only errors occurred
                                     let html = '';
                                     response.errors.forEach(err => {
                                         html += '<div class="alert alert-danger py-2 mb-1"><i class="bi bi-exclamation-triangle me-2"></i>' + err + '</div>';
@@ -317,11 +313,9 @@
                     }
                 }
 
-                // --- Deletion Logic ---
-        // Helper to refresh T1 and T2
         function refreshTables() {
             $.ajax({
-                url: window.location.href, // Current URL with params
+                url: window.location.href,
                 method: 'GET',
                 data: { refresh_tables: 1 },
                 success: function(response) {
@@ -335,7 +329,6 @@
             });
         }
 
-        // Delete Act Item
         $(document).on('click', '.btn-delete-act', function() {
             if (!confirm('Вы уверены, что хотите удалить эту запись?')) return;
             const btn = $(this);
@@ -345,7 +338,7 @@
             
             $.ajax({
                 url: '/acts/' + actId + '/item/' + itemIndex,
-                method: 'POST', // Laravel uses POST w/ _method=DELETE usually, or just DELETE if supported
+                method: 'POST',
                 data: { _method: 'DELETE', _token: '{{ csrf_token() }}' },
                 success: function() {
                     tr.fadeOut(300, function() { $(this).remove(); });
@@ -357,12 +350,10 @@
             });
         });
 
-        // Inline Editing
-        // wasteOptions is already defined above
 
         $(document).on('click', '.editable-cell', function() {
             const td = $(this);
-            if (td.find('input, select').length) return; // Already editing
+            if (td.find('input, select').length) return;
 
             const currentVal = td.data('value');
             const field = td.data('field');
@@ -374,15 +365,12 @@
             let inputHtml = '';
             if (type === 'select' && field === 'name') {
                 inputHtml = '<select class="form-select form-select-sm editor-input">';
-                // Add current value if not in list (optional, but good practice)
-                // wasteOptions is correct
                 wasteOptions.forEach(opt => {
                     const selected = opt === currentVal ? 'selected' : '';
                     inputHtml += `<option value="${opt}" ${selected}>${opt}</option>`;
                 });
                 inputHtml += '</select>';
             } else if (field === 'date') {
-                // Ensure YYYY-MM-DD format for input
                 inputHtml = `<input type="date" class="form-control form-control-sm editor-input" value="${currentVal}">`;
             } else {
                 inputHtml = `<input type="text" class="form-control form-control-sm editor-input" value="${currentVal}">`;
@@ -392,13 +380,11 @@
             const input = td.find('.editor-input');
             input.focus();
 
-            // Save on Blur or Enter
             input.on('blur keypress', function(e) {
                 if (e.type === 'keypress' && e.which !== 13) return;
                 
                 const newVal = $(this).val();
                 
-                // If unchanged, revert
                 if (newVal == currentVal) {
                     td.html(originalHtml);
                     return;
@@ -415,24 +401,17 @@
                         item_index: itemIndex
                     },
                     success: function (response) {
-                        // Handle Split (if Act was split into a new one)
                         if (response.split) {
                             const tr = td.closest('tr');
                             tr.data('act-id', response.new_act_id);
                             tr.data('item-index', response.new_item_index);
-                            // Also update the attribute in DOM for future selectors
                             tr.attr('data-act-id', response.new_act_id);
                             tr.attr('data-item-index', response.new_item_index);
                         }
 
-                        // Always update only THIS cell's display
-                        // We do not sync other rows because:
-                        // 1. If split, this is now a unique act.
-                        // 2. If not split (single item), there are no other rows to sync.
                         
                         td.data('value', newVal);
 
-                        // Formatting for display
                         if (field === 'date') {
                             const d = new Date(newVal);
                             const day = String(d.getDate()).padStart(2, '0');
@@ -445,7 +424,6 @@
                             td.html(newVal);
                         }
                         
-                        // Visual feedback
                         td.addClass('bg-success text-white');
                         setTimeout(() => td.removeClass('bg-success text-white'), 1000);
                         
@@ -453,7 +431,7 @@
                     },
                     error: function (xhr) {
                         alert('Ошибка сохранения: ' + (xhr.responseJSON?.message || 'Unknown error'));
-                        td.html(originalHtml); // Revert on error
+                        td.html(originalHtml);
                     }
                 });
             });

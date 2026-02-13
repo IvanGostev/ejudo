@@ -65,7 +65,7 @@
 @section('content')
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="fw-bold">Архив актов</h2>
+            <h2 class="fw-bold">Реестр актов</h2>
             <div>
                 <a href="{{ route('acts.manual.create') }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Добавить акт вручную
@@ -115,8 +115,7 @@
                                         </td>
                                         <td>
                                             <div class="d-flex gap-3">
-                                                <button class="btn btn-sm btn-open toggle-expand"
-                                                    data-act-id="{{ $act->id }}">
+                                                <button class="btn btn-sm btn-open toggle-expand" data-act-id="{{ $act->id }}">
                                                     <i class="bi bi-chevron-down"></i> Открыть
                                                 </button>
                                                 <button class="btn btn-sm delete-act"

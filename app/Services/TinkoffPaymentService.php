@@ -50,7 +50,7 @@ class TinkoffPaymentService
             'NotificationURL' => route('subscription.webhook'),
             'Receipt' => $receipt
         ];
-        $params['SuccessURL'] = route('subscription.index'); // Fallback/Standard
+        $params['SuccessURL'] = route('subscription.index');
         if (\Route::has('subscription.success')) {
             $params['SuccessURL'] = route('subscription.success');
         } elseif (\Route::has('payment.success')) {
@@ -68,7 +68,7 @@ class TinkoffPaymentService
                 return null;
             }
 
-            return $data; // Contains PaymentURL, PaymentId
+            return $data;
         } catch (\Exception $e) {
             Log::error('Tinkoff Init Exception: ' . $e->getMessage());
             return null;

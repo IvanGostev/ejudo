@@ -18,7 +18,7 @@ class ReferralMiddleware
     {
         if ($request->has('ref')) {
             $referralCode = $request->query('ref');
-            Cookie::queue('referral_code', $referralCode, 60 * 24 * 30); // 30 days
+            Cookie::queue('referral_code', $referralCode, 60 * 24 * 30);
         }
 
         return $next($request);

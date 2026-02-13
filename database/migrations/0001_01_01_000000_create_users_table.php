@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->string('phone', 20)->unique();
             $table->boolean('phone_verified')->default(false);
-            $table->string('pin_code')->nullable(); // encrypted
+            $table->string('pin_code')->nullable();
             $table->enum('role', ['waste_generator', 'waste_processor'])->nullable();
             $table->enum('tariff', ['free', 'paid'])->default('free');
             $table->dateTime('subscription_ends_at')->nullable();

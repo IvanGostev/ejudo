@@ -13,7 +13,7 @@ return new class extends Migration {
             $table->string('filename');
             $table->string('original_name')->nullable();
             $table->integer('file_size')->nullable();
-            $table->json('act_data'); // Full structure of the act
+            $table->json('act_data');
             $table->enum('status', ['uploaded', 'processing', 'processed', 'error'])->default('uploaded');
             $table->json('processing_result')->nullable();
             $table->timestamps();

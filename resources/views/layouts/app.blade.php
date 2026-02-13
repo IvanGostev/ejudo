@@ -293,7 +293,6 @@
                                 clearTimeout(debounceTimer);
 
                                 if (query.length < 2) {
-                                    // Restore default view if empty
                                     if (query.length === 0) {
                                         $('#tree-content').html(`
                                                     <div class="mb-2">Блок 1. Отходы с/х</div>

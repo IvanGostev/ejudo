@@ -109,7 +109,6 @@
     </div>
 
     <script>
-        // Simple script to toggle KPP requirement based on Type
         document.addEventListener('DOMContentLoaded', function () {
             const typeSelect = document.getElementById('type-select');
             const kppInput = document.querySelector('input[name="kpp"]');
@@ -117,7 +116,6 @@
 
             function updateKpp() {
                 if (typeSelect.value === 'ИП') {
-                    // KPP not usually needed for IP, optional or disabled
                     kppInput.removeAttribute('required');
                     kppAsterisk.classList.add('d-none');
                 } else {
@@ -127,7 +125,7 @@
             }
 
             typeSelect.addEventListener('change', updateKpp);
-            updateKpp(); // Init
+            updateKpp();
         });
     </script>
 @endsection

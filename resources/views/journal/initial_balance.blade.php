@@ -94,12 +94,10 @@
                 row.innerHTML = row.innerHTML.replace(/INDEX/g, rowCount);
                 row.querySelector('.row-number').textContent = rowCount;
 
-                // Remove Handler
                 row.querySelector('.remove-row').addEventListener('click', function () {
                     row.remove();
                 });
 
-                // Search Logic
                 const input = row.querySelector('.waste-search');
                 const results = row.querySelector('.waste-results');
 
@@ -118,7 +116,6 @@
                     clearTimeout(timeout);
                     const query = this.value.trim();
 
-                    // Force selection: clear hidden values whenever user types
                     hiddenName.value = '';
                     hiddenFkko.value = '';
                     hiddenHazard.value = '';
@@ -148,20 +145,15 @@
                                         a.onclick = (e) => {
                                             e.preventDefault();
 
-                                            // Update Hidden Inputs
                                             hiddenName.value = item.name;
                                             hiddenFkko.value = item.code;
                                             hiddenHazard.value = item.hazard_class;
 
-                                            // Update Display Info
                                             dispName.textContent = item.name;
                                             dispFkko.textContent = item.code;
                                             dispHazard.textContent = item.hazard_class;
                                             infoBlock.style.display = 'block';
 
-                                            // Clear Search Input or keep it? 
-                                            // Maybe keep it as "Search/Edit"? 
-                                            // Let's hide results.
                                             input.value = item.name;
 
                                             results.style.display = 'none';
@@ -176,9 +168,7 @@
                     }, 300);
                 });
 
-                // Validate on blur: if hidden ID is empty, clear visible input
                 input.addEventListener('blur', function () {
-                    // Small delay to allow click event on result to fire first
                     setTimeout(() => {
                         if (hiddenName.value === '') {
                             input.value = '';
@@ -186,7 +176,6 @@
                     }, 200);
                 });
 
-                // Close dropdown on click outside
                 document.addEventListener('click', function (e) {
                     if (!input.contains(e.target) && !results.contains(e.target)) {
                         results.style.display = 'none';
@@ -198,16 +187,11 @@
 
             addBtn.addEventListener('click', addRow);
 
-            // Add first row by default
             addRow();
 
             window.clearWastesAndSubmit = function (e) {
-                // Prevent default submission to modify DOM first if needed, or if we use formatAction
-                // Actually, simply clearing the container is enough
                 const container = document.getElementById('wastes-container');
                 container.innerHTML = '';
-                // Since this button is type="submit" inside the form, it will submit after this click handler unless we preventDefault.
-                // We want it to submit.
                 return true;
             };
         });

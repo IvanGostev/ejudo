@@ -43,7 +43,7 @@ class GigaChatService
 
         if ($response->successful()) {
             $token = $response->json('access_token');
-            $expiresAt = $response->json('expires_at'); // Unix timestamp
+            $expiresAt = $response->json('expires_at');
             cache()->put('gigachat_token', $token, 1700);
 
             return $token;
@@ -131,7 +131,7 @@ class GigaChatService
             $response = Http::withToken($token)
                 ->withOptions(['verify' => false])
                 ->post($this->baseUrl . '/chat/completions', [
-                        'model' => 'GigaChat', // Or GigaChat-Pro if available/paid
+                        'model' => 'GigaChat',
                         'messages' => [
                             [
                                 'role' => 'user',

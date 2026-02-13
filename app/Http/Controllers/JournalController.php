@@ -662,10 +662,13 @@ class JournalController extends Controller
                 $r = $startRow;
                 $rowNum = 1;
 
-                foreach ($data as $item) {
-                    $sheet->setCellValue('B' . $r, $rowNum++);
+                $rowNumCol = ($sheetIndex === 3) ? 'A' : 'B';
+                $dataStartCol = ($sheetIndex === 3) ? 'B' : 'C';
 
-                    $colIndex = 'C';
+                foreach ($data as $item) {
+                    $sheet->setCellValue($rowNumCol . $r, $rowNum++);
+
+                    $colIndex = $dataStartCol;
 
                     foreach ($columns as $key) {
                         $val = $item[$key] ?? '-';
@@ -677,9 +680,9 @@ class JournalController extends Controller
                     }
                     $r++;
                 }
-                while ($sheet->getCell('B' . $r)->getValue() != '') {
-                    $sheet->setCellValue('B' . $r, '');
-                    $c = 'C';
+                while ($sheet->getCell($rowNumCol . $r)->getValue() != '') {
+                    $sheet->setCellValue($rowNumCol . $r, '');
+                    $c = $dataStartCol;
                     for ($i = 0; $i < count($columns); $i++) {
                         $sheet->setCellValue($c . $r, '');
                         $c++;

@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->string('fkko_code')->nullable();
             $table->string('hazard_class')->nullable();
             $table->decimal('amount', 15, 3)->default(0);
-            $table->year('year'); // Balance at start of which year? or date? simplified to year or period?
+            $table->year('year');
             $table->date('period');
             $table->timestamps();
         });

@@ -91,14 +91,13 @@
                 }
             });
 
-            // Pre-fill email from localStorage
             const savedEmail = localStorage.getItem('auth_email');
             if (savedEmail) {
                 $('#email').val(savedEmail);
                 $('#remember').prop('checked', true);
             }
 
-            let step = 'send'; // send or verify
+            let step = 'send';
 
             $('#auth-form').on('submit', function (e) {
                 e.preventDefault();
@@ -120,7 +119,6 @@
                             step = 'verify';
                             $('#code-group').removeClass('d-none');
                             $('#submit-btn').text('Войти');
-                            // Code sent successfully
                             $('#alert-container').html('<div class="alert alert-success">Код отправлен на почту!</div>');
                         })
                         .fail(function (err) {
@@ -139,7 +137,6 @@
                         remember: remember
                     })
                         .done(function (res) {
-                            // Save email if remember is checked
                             if (remember) {
                                 localStorage.setItem('auth_email', email);
                             } else {

@@ -108,7 +108,7 @@
             }
 
             typeSelect.addEventListener('change', updateKpp);
-            updateKpp(); // Init
+            updateKpp();
         });
     </script>
 @endsection

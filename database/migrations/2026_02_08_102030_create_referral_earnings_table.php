@@ -12,8 +12,8 @@ return new class extends Migration {
     {
         Schema::create('referral_earnings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // The referrer who earned
-            $table->foreignId('referral_id')->constrained('users')->onDelete('cascade'); // The referred user who paid
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('referral_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('payment_id')->constrained('payments')->onDelete('cascade');
             $table->decimal('amount', 12, 2);
             $table->decimal('percent', 5, 2);

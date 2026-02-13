@@ -169,30 +169,24 @@
 
     <script>
         function selectPeriod(btn) {
-            // Update hidden input
             const value = btn.getAttribute('data-value');
             document.getElementById('selectedPeriodInput').value = value;
 
-            // Update UI classes
             document.querySelectorAll('.period-btn').forEach(b => {
                 b.classList.remove('btn-dark', 'text-white');
                 b.classList.add('btn-white', 'text-dark', 'border-0');
-                // Remove custom style if any
                 b.style.backgroundColor = '';
                 b.style.borderColor = '';
             });
 
             btn.classList.remove('btn-white', 'text-dark', 'border-0');
             btn.classList.add('btn-dark', 'text-white');
-            // Force black style
             btn.style.backgroundColor = '#000218';
             btn.style.borderColor = '#000218';
 
-            // Update Label
             document.getElementById('selectedPeriodLabel').innerText = btn.innerText.trim();
         }
 
-        // Initialize styles for pre-selected (if any)
         document.addEventListener('DOMContentLoaded', function () {
             const currentVal = document.getElementById('selectedPeriodInput').value;
             const activeBtn = document.querySelector(`.period-btn[data-value="${currentVal}"]`);

@@ -32,7 +32,7 @@ class SmsService
                 'phone' => $phone,
                 'text' => $message,
                 'sender' => $this->sender,
-            ], '', '&', PHP_QUERY_RFC3986); // Forces %20 for spaces
+            ], '', '&', PHP_QUERY_RFC3986);
 
             $url = 'http://api.smsfeedback.ru/messages/v2/send/?' . $queryString;
 
