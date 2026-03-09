@@ -160,14 +160,25 @@
                             АКТЫ
                         </a>
                         <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item {{ request()->routeIs('acts.archive') ? 'active' : '' }}" 
+                             <li>
+                                <a class="dropdown-item {{ request()->routeIs('acts.archive') ? 'active' : '' }}"
                                    href="{{ route('acts.archive') }}">
-                                    ВСЕ АКТЫ
+                                    РЕЕСТР АКТОВ
                                 </a>
                             </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><span class="dropdown-item-text text-muted small text-uppercase fw-bold">Добавить акт вручную</span></li>
+                            @foreach(\App\Models\Act::TYPES as $typeKey => $typeLabel)
                             <li>
-                                <a class="dropdown-item {{ request()->routeIs('dashboard') ? 'active' : '' }}" 
+                                <a class="dropdown-item {{ request()->routeIs('acts.manual.create') && request()->input('act_type') === $typeKey ? 'active' : '' }}"
+                                   href="{{ route('acts.manual.create', ['act_type' => $typeKey]) }}">
+                                    {{ $typeLabel }}
+                                </a>
+                            </li>
+                            @endforeach
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('dashboard') ? 'active' : '' }}"
                                    href="{{ route('dashboard') }}">
                                     ЗАГРУЗИТЬ АКТ
                                 </a>
@@ -184,6 +195,17 @@
                             КОМПАНИИ
                         </a>
                     </li>
+                    @php
+                        $navCurrentCompany = app(\App\Services\TenantService::class)->getCompany();
+                    @endphp
+                    @if($navCurrentCompany && $navCurrentCompany->hasPolygons())
+                    <li class="nav-item">
+                        <a href="{{ route('polygons.index') }}"
+                            class="nav-link {{ request()->routeIs('polygons.*') ? 'active' : '' }}">
+                            ПОЛИГОНЫ
+                        </a>
+                    </li>
+                    @endif
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('subscription.index') ? 'active' : '' }}"
                             href="{{ route('subscription.index') }}">ТАРИФЫ</a>
@@ -396,7 +418,7 @@
             </div>
             <div class="row mt-4 pt-3 border-top border-secondary">
                 <div class="col-12 text-center text-white small">
-                    <p class="mb-0">© 2026 ejydo.ru. ИНН 272336634478 ОГРНИП 325270000036421</p>
+                    <p class="mb-0">© {{ date('Y') }} ejydo.ru. ИНН 272336634478 ОГРНИП 325270000036421</p>
                 </div>
             </div>
         </div>

@@ -12,6 +12,7 @@ class WasteBalance extends Model
 
     protected $fillable = [
         'company_id',
+        'polygon_id',
         'fkko_code',
         'period',
         'quantity',
@@ -26,5 +27,10 @@ class WasteBalance extends Model
     public function fkko(): BelongsTo
     {
         return $this->belongsTo(FkkoCode::class, 'fkko_code', 'code');
+    }
+
+    public function polygon(): BelongsTo
+    {
+        return $this->belongsTo(Polygon::class, 'polygon_id');
     }
 }

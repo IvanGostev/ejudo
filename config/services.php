@@ -44,4 +44,8 @@ return [
         'enabled' => env('NEW_USER_NOTIFICATION', false),
         'email' => env('NEW_USER_NOTIFICATION_EMAIL'),
     ],
+
+    'checko' => [
+        'key' => env('CHECKO_API_KEY', 'lsjKTmB9fLnDuT85'),
+    ],
 ];

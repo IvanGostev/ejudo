@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\UserCompany;
-use App\Services\SmsService;
 use App\Services\TenantService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +16,6 @@ use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     public function __construct(
-        protected SmsService $smsService,
         protected TenantService $tenantService
     ) {
     }

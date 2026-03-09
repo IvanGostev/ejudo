@@ -12,6 +12,9 @@ class Act extends Model
 
     protected $fillable = [
         'company_id',
+        'act_type',
+        'act_number',
+        'contract_details',
         'filename',
         'original_name',
         'file_size',
@@ -19,6 +22,28 @@ class Act extends Model
         'status',
         'processing_result',
     ];
+
+    // Типы актов
+    public const TYPES = [
+        'transfer'      => 'Акт передачи',
+        'processing'    => 'Акт обработки',
+        'utilization'   => 'Акт утилизации',
+        'neutralization'=> 'Акт обезвреживания',
+        'storage'       => 'Акт хранения',
+        'burial'        => 'Акт захоронения',
+    ];
+
+    public function getTypeLabel(): string
+    {
+        return self::TYPES[$this->act_type] ?? 'Акт передачи';
+    }
+
+    // Следующий сквозной номер для компании
+    public static function nextActNumber(int $companyId): int
+    {
+        $max = static::where('company_id', $companyId)->max('act_number');
+        return ($max ?? 0) + 1;
+    }
 
     protected $casts = [
         'act_data' => 'array',

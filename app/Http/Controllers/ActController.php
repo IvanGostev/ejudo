@@ -81,6 +81,7 @@ class ActController extends Controller
 
                 $act = \App\Models\Act::create([
                     'company_id' => $company ? $company->id : null,
+                    'act_number' => $company ? \App\Models\Act::nextActNumber($company->id) : null,
                     'filename' => $path,
                     'original_name' => $file->getClientOriginalName(),
                     'file_size' => $file->getSize(),

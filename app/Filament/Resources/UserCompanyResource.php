@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserCompanyResource\Pages;
+use App\Filament\Resources\UserCompanyResource\RelationManagers;
 use App\Models\UserCompany;
 use Filament\Forms;
 use Filament\Schemas\Schema;
@@ -104,7 +105,7 @@ class UserCompanyResource extends Resource
     public static function getRelations(): array
     {
         return [
-
+            RelationManagers\PolygonsRelationManager::class,
         ];
     }
 

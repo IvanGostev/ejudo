@@ -21,10 +21,8 @@
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label">Тип организации <span class="text-danger">*</span></label>
-                                <select class="form-select" name="type" id="type-select" required>
-                                    <option value="ООО" {{ $company->type == 'ООО' ? 'selected' : '' }}>ООО</option>
-                                    <option value="ИП" {{ $company->type == 'ИП' ? 'selected' : '' }}>ИП</option>
-                                </select>
+                                <input type="text" class="form-control" name="type" id="type-input" value="{{ $company->type }}"
+                                    placeholder="ООО, ИП, МУП и другие" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Наименование <span class="text-danger">*</span></label>
@@ -33,8 +31,13 @@
 
                             <div class="col-md-6">
                                 <label class="form-label">ИНН <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="inn" value="{{ $company->inn }}"
-                                    minlength="10" maxlength="12" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" name="inn" id="inn-field" value="{{ $company->inn }}"
+                                        minlength="10" maxlength="12" required>
+                                    <button class="btn btn-outline-primary" type="button" id="btn-find-inn" title="Обновить информацию через Checko">
+                                        <i class="bi bi-search"></i> Найти
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="col-md-6" id="kpp-group">
@@ -61,6 +64,17 @@
                             <label class="form-label">Фактический адрес</label>
                             <input type="text" class="form-control" name="actual_address"
                                 value="{{ $company->actual_address }}">
+                        </div>
+
+                        <h6 class="fw-bold mb-3 border-bottom pb-2">Лицензия на обращение с отходами</h6>
+
+                        <div class="mb-4">
+                            <label class="form-label">Реквизиты лицензии</label>
+                            <input type="text" class="form-control @error('license_details') is-invalid @enderror"
+                                name="license_details" value="{{ old('license_details', $company->license_details) }}"
+                                placeholder="Номер лицензии, дата выдачи, орган, срок действия">
+                            <div class="form-text">Используется в Таблице 3, ст. 14 ЖУДО.</div>
+                            @error('license_details') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
                         <h6 class="fw-bold mb-3 border-bottom pb-2">Контактные данные</h6>
@@ -93,12 +107,15 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const typeSelect = document.getElementById('type-select');
+            const typeInput = document.getElementById('type-input');
             const kppInput = document.querySelector('input[name="kpp"]');
             const kppAsterisk = document.getElementById('kpp-asterisk');
+            const innInput = document.getElementById('inn-field');
+            const btnFind = document.getElementById('btn-find-inn');
 
             function updateKpp() {
-                if (typeSelect.value === 'ИП') {
+                const val = typeInput.value.trim().toUpperCase();
+                if (val === 'ИП' || val.includes('ИНДИВИДУАЛЬНЫЙ')) {
                     kppInput.removeAttribute('required');
                     kppAsterisk.classList.add('d-none');
                 } else {
@@ -107,8 +124,49 @@
                 }
             }
 
-            typeSelect.addEventListener('change', updateKpp);
+            typeInput.addEventListener('input', updateKpp);
             updateKpp();
+
+            btnFind.addEventListener('click', async function() {
+                const inn = innInput.value.trim();
+                if (!inn) {
+                    alert('Пожалуйста, введите ИНН');
+                    return;
+                }
+
+                const originalHtml = btnFind.innerHTML;
+                btnFind.disabled = true;
+                btnFind.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                try {
+                    const response = await fetch(`{{ route('checko.inn') }}?inn=${inn}`);
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Ошибка при поиске');
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.name) {
+                        document.querySelector('input[name="name"]').value = data.name;
+                        document.querySelector('input[name="type"]').value = data.type || '';
+                        document.querySelector('input[name="kpp"]').value = data.kpp || '';
+                        document.querySelector('input[name="ogrn"]').value = data.ogrn || '';
+                        document.querySelector('input[name="legal_address"]').value = data.address || '';
+                        
+                        updateKpp();
+                        alert('Данные успешно обновлены!');
+                    } else {
+                        alert('Организация не найдена');
+                    }
+                } catch (error) {
+                    console.error('Checko Lookup Error:', error);
+                    alert('Ошибка: ' + error.message);
+                } finally {
+                    btnFind.disabled = false;
+                    btnFind.innerHTML = originalHtml;
+                }
+            });
         });
     </script>
 @endsection

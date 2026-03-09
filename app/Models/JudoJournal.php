@@ -14,6 +14,7 @@ class JudoJournal extends Model
         'period',
         'type',
         'company_id',
+        'polygon_id',
         'role',
         'table1_data',
         'table2_data',
@@ -33,4 +34,9 @@ class JudoJournal extends Model
         'is_paid' => 'boolean',
         'downloaded_at' => 'datetime',
     ];
+
+    public function polygon(): BelongsTo
+    {
+        return $this->belongsTo(Polygon::class, 'polygon_id');
+    }
 }

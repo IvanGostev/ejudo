@@ -16,7 +16,7 @@
             <a href="{{ route('companies.create') }}" class="btn btn-outline-primary">Создать компанию</a>
         </div>
     @else
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 align-middle">
@@ -61,5 +61,61 @@
                 </div>
             </div>
         </div>
+
+        {{-- Блок «Режим полигонов» — для компаний без полигонов --}}
+        @php
+            $currentCompany = app(\App\Services\TenantService::class)->getCompany();
+        @endphp
+        @if($currentCompany && !$currentCompany->hasPolygons())
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #FF4C2B !important;">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-auto pe-0">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width: 56px; height: 56px; background: rgba(255,76,43,0.1);">
+                                <i class="bi bi-geo-alt-fill text-judo-orange fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <h5 class="mb-1 fw-bold">Режим множественных полигонов</h5>
+                            <p class="text-muted mb-0 small">
+                                Если вы управляете несколькими объектами размещения отходов (полигонами), вы можете
+                                вести отдельный учёт ЖУДО для каждого из них. После добавления первого полигона
+                                в меню появится раздел <strong>«Полигоны»</strong> и при создании журналов можно будет
+                                выбрать конкретный объект.
+                            </p>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{{ route('polygons.create') }}" class="btn btn-primary">
+                                <i class="bi bi-plus-lg me-1"></i>Добавить первый полигон
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @elseif($currentCompany && $currentCompany->hasPolygons())
+            @php $polygonCount = $currentCompany->polygons()->count(); @endphp
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #198754 !important;">
+                <div class="card-body p-3">
+                    <div class="row align-items-center">
+                        <div class="col-auto pe-0">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width: 44px; height: 44px; background: rgba(25,135,84,0.1);">
+                                <i class="bi bi-geo-alt-fill text-success fs-5"></i>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="fw-medium">Режим полигонов активен для <strong>{{ $currentCompany->name }}</strong></div>
+                            <div class="text-muted small">{{ $polygonCount }} {{ $polygonCount === 1 ? 'полигон' : ($polygonCount < 5 ? 'полигона' : 'полигонов') }} — учёт ЖУДО ведётся по каждому объекту отдельно</div>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{{ route('polygons.index') }}" class="btn btn-outline-success btn-sm">
+                                <i class="bi bi-geo-alt me-1"></i>Управление полигонами
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
     @endif
 @endsection

@@ -40,16 +40,17 @@ class CompanyController extends Controller
         ];
 
         $validated = $request->validate([
-            'type' => 'required|in:ООО,ИП',
-            'name' => 'required|string|max:255',
-            'inn' => 'required|string|min:10|max:12',
-            'kpp' => 'nullable|string|max:9',
-            'ogrn' => 'required|string|min:13|max:15',
+            'type'          => 'required|string|max:100',
+            'name'          => 'required|string|max:255',
+            'inn'           => 'required|string|min:10|max:12',
+            'kpp'           => 'nullable|string|max:9',
+            'ogrn'          => 'required|string|min:13|max:15',
             'legal_address' => 'required|string',
-            'actual_address' => 'nullable|string',
-            'contact_person' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
+            'actual_address'=> 'nullable|string',
+            'license_details' => 'nullable|string|max:500',
+            'contact_person'=> 'nullable|string|max:255',
+            'phone'         => 'nullable|string|max:20',
+            'email'         => 'nullable|email|max:255',
         ], $messages);
 
         $company = $user->companies()->create($validated);
@@ -73,16 +74,17 @@ class CompanyController extends Controller
         }
 
         $validated = $request->validate([
-            'type' => 'required|in:ООО,ИП',
-            'name' => 'required|string|max:255',
-            'inn' => 'required|string|min:10|max:12',
-            'kpp' => 'nullable|string|max:9',
-            'ogrn' => 'required|string|min:13|max:15',
+            'type'          => 'required|string|max:100',
+            'name'          => 'required|string|max:255',
+            'inn'           => 'required|string|min:10|max:12',
+            'kpp'           => 'nullable|string|max:9',
+            'ogrn'          => 'required|string|min:13|max:15',
             'legal_address' => 'required|string',
-            'actual_address' => 'nullable|string',
-            'contact_person' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
+            'actual_address'=> 'nullable|string',
+            'license_details' => 'nullable|string|max:500',
+            'contact_person'=> 'nullable|string|max:255',
+            'phone'         => 'nullable|string|max:20',
+            'email'         => 'nullable|email|max:255',
         ]);
 
         $company->update($validated);

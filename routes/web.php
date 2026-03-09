@@ -31,6 +31,8 @@ Route::middleware('auth')->group(function () {
 
         Route::resource('acts', \App\Http\Controllers\ActController::class);
         Route::resource('journal', \App\Http\Controllers\JournalController::class);
+        Route::patch('/journal/{journal}/polygon', [\App\Http\Controllers\JournalController::class, 'assignPolygon'])->name('journal.assign-polygon');
+        Route::resource('polygons', \App\Http\Controllers\PolygonController::class);
 
         Route::delete('/acts/{act}/item/{itemIndex}', [\App\Http\Controllers\ActController::class, 'destroyItem'])->name('acts.destroy-item');
 
@@ -43,6 +45,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/subscription/callback', [\App\Http\Controllers\SubscriptionController::class, 'callback'])->name('subscription.callback');
         Route::get('/success', [\App\Http\Controllers\SubscriptionController::class, 'success'])->name('payment.success');
 
+        Route::get('/checko/inn', [\App\Http\Controllers\CheckoController::class, 'findByInn'])->name('checko.inn');
         Route::get('/fkko/search', [\App\Http\Controllers\FkkoController::class, 'search'])->name('fkko.search');
         Route::get('/fkko', function () {
             return "FKKO Reference (Placeholder)";
@@ -52,6 +55,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/acts/manual/create', [\App\Http\Controllers\ManualActController::class, 'create'])->name('acts.manual.create');
         Route::post('/acts/manual/store', [\App\Http\Controllers\ManualActController::class, 'store'])->name('acts.manual.store');
 
+        Route::get('/acts-manual/{act}/download', [\App\Http\Controllers\ManualActController::class, 'downloadDoc'])->name('acts.manual.download');
         Route::get('/acts-archive', [\App\Http\Controllers\ActArchiveController::class, 'index'])->name('acts.archive');
         Route::put('/acts-archive/{act}', [\App\Http\Controllers\ActArchiveController::class, 'update'])->name('acts.archive.update');
 
