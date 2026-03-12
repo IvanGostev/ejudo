@@ -111,23 +111,30 @@
                                 </div>
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
+                            <div class="row align-items-end">
+                                <div class="col-md-5 mb-3">
                                     <label class="form-label">Поставщик</label>
                                     <div class="input-group">
                                         <input type="text" name="provider" id="provider" class="form-control"
-                                            value="{{ old('provider', (session('user_role') === 'Переработчик отходов' ? '' : ($currentCompany->name ?? ''))) }}"
+                                            value="{{ old('provider', '') }}"
                                             placeholder="Кто передал отход" required>
                                         <button class="btn btn-outline-secondary" type="button" onclick="findCompanyByInn('provider')" title="Найти по ИНН">
                                             <i class="bi bi-search"></i> ИНН
                                         </button>
                                     </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-2 mb-3 d-flex justify-content-center">
+                                    <button type="button" class="btn btn-outline-secondary text-nowrap" onclick="swapCompanies()" title="Поменять местами">
+                                        <i class="bi bi-arrow-left-right d-none d-md-inline-block"></i>
+                                        <i class="bi bi-arrow-down-up d-inline-block d-md-none"></i>
+                                        <span class="d-inline-block d-md-none ms-2">Поменять</span>
+                                    </button>
+                                </div>
+                                <div class="col-md-5 mb-3">
                                     <label class="form-label">Получатель</label>
                                     <div class="input-group">
                                         <input type="text" name="receiver" id="receiver" class="form-control"
-                                            value="{{ old('receiver', (session('user_role') === 'Переработчик отходов' ? ($currentCompany->name ?? '') : '')) }}"
+                                            value="{{ old('receiver', ($currentCompany->name ?? '')) }}"
                                             placeholder="Кто принял отход" required>
                                         <button class="btn btn-outline-secondary" type="button" onclick="findCompanyByInn('receiver')" title="Найти по ИНН">
                                             <i class="bi bi-search"></i> ИНН
@@ -191,6 +198,8 @@
                                                     'temp-op5' => 'Размещение (Захоронение)',
                                                     'temp-op6' => 'Размещение (Хранение)',
                                                     'temp-op7' => 'Накопление',
+                                                    'temp-op8' => 'Передача третьим лицам',
+                                                    'temp-op9' => 'Транспортирование',
                                                 ];
                                             @endphp
                                             @foreach($operations as $opId => $opLabel)
@@ -232,6 +241,14 @@
         let wasteItems = [];
         let currentWasteData = null;
         let wasteItemCounter = 0;
+
+        function swapCompanies() {
+            const providerInput = document.getElementById('provider');
+            const receiverInput = document.getElementById('receiver');
+            const temp = providerInput.value;
+            providerInput.value = receiverInput.value;
+            receiverInput.value = temp;
+        }
 
         function clearWasteSelection() {
             document.getElementById('waste-search').value = '';
@@ -324,7 +341,10 @@
         function resetWasteForm() {
             document.getElementById('waste-search').value = '';
             document.getElementById('temp-amount').value = '';
-            document.querySelectorAll('[id^="temp-op"]').forEach(cb => cb.checked = false);
+            document.querySelectorAll('[id^="temp-op"]').forEach(cb => {
+                cb.checked = false;
+                if (cb.id === 'temp-op8') cb.disabled = true;
+            });
             currentWasteData = null;
             document.getElementById('selected-waste-display').classList.add('d-none');
             document.getElementById('waste-search-section').style.display = 'none';
@@ -332,6 +352,18 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             renderWasteItems();
+
+            const op8 = document.getElementById('temp-op8');
+            const otherOps = document.querySelectorAll('[id^="temp-op"]:not(#temp-op8)');
+            
+            if (op8) {
+                op8.disabled = true;
+                const updateOp8 = () => {
+                    let anyChecked = Array.from(otherOps).some(c => c.checked);
+                    op8.checked = anyChecked;
+                };
+                otherOps.forEach(cb => cb.addEventListener('change', updateOp8));
+            }
 
             const form = document.querySelector('form[action="{{ route('acts.manual.store') }}"]');
             form.addEventListener('submit', function (e) {

@@ -136,18 +136,24 @@
                          <div class="table-responsive">
                              <table class="table table-bordered table-sm text-center align-middle caption-top" style="font-size: 0.9rem; border-color: #000;">
                                 <caption style="color: #000; font-weight: bold;">Данные о видах отходов (Таблица 1)</caption>
-                                <thead class="table-light">
+                                 <thead class="table-light">
                                     <tr>
                                         <th>№ п/п</th>
                                         <th>Наименование вида отхода</th>
                                         <th>Код по ФККО</th>
                                         <th>Класс опасности</th>
+                                        <th>Происхождение или условия<br>образования вида отхода</th>
+                                        <th>Агрегатное состояние и<br>физическая форма</th>
+                                        <th>Химический и (или)<br>компонентный состав, %</th>
                                     </tr>
-                                    <tr>
-                                        <th class="text-muted">1</th>
-                                        <th class="text-muted">2</th>
-                                        <th class="text-muted">3</th>
-                                        <th class="text-muted">4</th>
+                                    <tr class="text-muted small">
+                                        <th>1</th>
+                                        <th>2</th>
+                                        <th>3</th>
+                                        <th>4</th>
+                                        <th>5</th>
+                                        <th>6</th>
+                                        <th>7</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -158,9 +164,12 @@
                                             <td class="text-start">{{ $item['name'] }}</td>
                                             <td>{{ $item['fkko'] }}</td>
                                             <td>{{ $item['hazard'] }}</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td>-</td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="4">Нет данных</td></tr>
+                                        <tr><td colspan="7">Нет данных</td></tr>
                                     @endforelse
                                 </tbody>
                              </table>
@@ -175,32 +184,33 @@
                             <table class="table table-bordered table-sm text-center align-middle caption-top"
                                 style="font-size: 0.75rem; border-color: #000;">
                                 <caption style="color: #000; font-weight: bold;">Обобщенные данные (Таблица 2)</caption>
-                                <thead class="table-light">
+                                 <thead class="table-light">
                                     <tr>
-                                        <th rowspan="2">№</th>
-                                        <th rowspan="2">Наименование отхода</th>
-                                        <th rowspan="2">Код ФККО</th>
-                                        <th rowspan="2">Класс</th>
-                                        <th rowspan="2">На начало (т)</th>
-                                        <th rowspan="2">Образов. (т)</th>
-                                        <th rowspan="2">Получено (т)</th>
-                                        <th rowspan="2">Обработ. (т)</th>
-                                        <th rowspan="2">Утилиз. (т)</th>
-                                        <th rowspan="2">Обезвреж. (т)</th>
-                                        <th colspan="5">Передано другим лицам (т)</th>
-                                        <th rowspan="2">Хран. (т)</th>
-                                        <th rowspan="2">Захор. (т)</th>
-                                        <th rowspan="2">На конец (т)</th>
+                                        <th rowspan="2">N строки</th>
+                                        <th rowspan="2">Наименование вида отхода</th>
+                                        <th rowspan="2">Код по ФККО</th>
+                                        <th rowspan="2">Класс опасности</th>
+                                        <th colspan="2">Наличие отходов на начало, тонн</th>
+                                        <th rowspan="2">Образовано отходов, тонн</th>
+                                        <th rowspan="2">Получено отходов, тонн</th>
+                                        <th rowspan="2">Обработано отходов, тонн</th>
+                                        <th rowspan="2">Утилизировано отходов, тонн</th>
+                                        <th rowspan="2">Обезврежено отходов, тонн</th>
+                                        <th rowspan="2">Передано отходов, тонн</th>
+                                        <th colspan="3">Размещено отходов, тонн</th>
+                                        <th colspan="2">Наличие отходов на конец, тонн</th>
                                     </tr>
                                     <tr>
+                                        <th>Хранение</th>
+                                        <th>Накопление</th>
                                         <th>Всего</th>
-                                        <th>Обраб.</th>
-                                        <th>Утил.</th>
-                                        <th>Обезвр.</th>
-                                        <th>Разм.</th>
+                                        <th>Хранение</th>
+                                        <th>Захоронение</th>
+                                        <th>Хранение</th>
+                                        <th>Накопление</th>
                                     </tr>
                                     <tr class="text-muted" style="font-size: 0.7rem;">
-                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th><th>18</th>
+                                        <th>А</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -211,25 +221,27 @@
                                             <td class="text-start" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $item['name'] }}">{{ $item['name'] }}</td>
                                             <td>{{ $item['fkko'] }}</td>
                                             <td>{{ $item['hazard'] }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['balance_begin'], 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['generated'], 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['received'], 3), '0'), '.') }}</td>
+                                            <td>-</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['balance_begin'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['generated'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['received'] ?? 0, 3), '0'), '.') }}</td>
                                             <td>{{ rtrim(rtrim(number_format($item['processed'] ?? 0, 3), '0'), '.') }}</td>
                                             <td>{{ rtrim(rtrim(number_format($item['utilized'] ?? 0, 3), '0'), '.') }}</td>
                                             <td>{{ rtrim(rtrim(number_format($item['neutralized'] ?? 0, 3), '0'), '.') }}</td>
-                                            
-                                            <td class="fw-bold">{{ rtrim(rtrim(number_format($item['transferred_total'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['trans_process'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['trans_util'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['trans_neutr'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format(($item['trans_store'] ?? 0) + ($item['trans_bury'] ?? 0), 3), '0'), '.') }}</td>
-                                            
-                                            <td>{{ rtrim(rtrim(number_format($item['stored'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['buried'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td><strong>{{ rtrim(rtrim(number_format($item['balance_end'], 3), '0'), '.') }}</strong></td>
+                                            <td>{{ rtrim(rtrim(number_format($item['transferred_total'] ?? 0, 3), '0'), '.') }}</td>
+                                            @php
+                                                $stored = $item['stored'] ?? 0;
+                                                $buried = $item['buried'] ?? 0;
+                                                $placed_total = $stored + $buried;
+                                            @endphp
+                                            <td>{{ rtrim(rtrim(number_format($placed_total, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($stored, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($buried, 3), '0'), '.') }}</td>
+                                            <td>-</td>
+                                            <td><strong>{{ rtrim(rtrim(number_format($item['balance_end'] ?? 0, 3), '0'), '.') }}</strong></td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="18">Нет данных</td></tr>
+                                        <tr><td colspan="17">Нет данных</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>
@@ -239,26 +251,51 @@
 
                 <!-- Table 3 -->
                 <div class="tab-pane fade" id="sheet3">
-                    <div class="bg-white p-4 mx-auto shadow-sm" style="max-width: 297mm; min-height: 210mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif;">
+                    <div class="bg-white p-4 mx-auto shadow-sm" style="max-width: 350mm; min-height: 210mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif;">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-sm text-center align-middle caption-top" style="font-size: 0.85rem; border-color: #000;">
+                            <table class="table table-bordered table-sm text-center align-middle caption-top" style="font-size: 0.75rem; border-color: #000;">
                                 <caption style="color: #000; font-weight: bold;">Передано (Таблица 3)</caption>
                                 <thead class="table-light">
                                     <tr>
-                                        <th>№</th><th>Дата</th><th>№ акта</th><th>Наименование</th><th>ФККО</th><th>Класс</th><th>Получатель</th><th>Кол-во (т)</th>
+                                        <th rowspan="2">N п/п</th>
+                                        <th rowspan="2">Наименование вида отхода</th>
+                                        <th rowspan="2">Код по ФККО</th>
+                                        <th rowspan="2">Класс опасности вида отхода</th>
+                                        <th colspan="6">Количество переданных отходов за отчетный период, тонн</th>
+                                        <th rowspan="2">Сведения о лицах, которым переданы отходы</th>
+                                        <th rowspan="2">Дата и номер договора на передачу</th>
+                                        <th rowspan="2">Срок действия договора</th>
+                                        <th rowspan="2">Реквизиты лицензии на осуществление деятельности по сбору, транспортированию, обработке, утилизации, обезвреживанию, размещению отходов I-IV классов опасности</th>
+                                    </tr>
+                                    <tr>
+                                        <th>всего</th>
+                                        <th>для обработки</th>
+                                        <th>для утилизации</th>
+                                        <th>для обезвреживания</th>
+                                        <th>для хранения</th>
+                                        <th>для захоронения</th>
+                                    </tr>
+                                    <tr class="text-muted" style="font-size: 0.7rem;">
+                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($journal->table3_data as $item)
                                         <tr>
                                             <td>{{ $loop->iteration }}</td>
-                                            <td>{{ $item['date'] }}</td>
-                                            <td>{{ $item['number'] }}</td>
-                                            <td class="text-start">{{ $item['waste'] }}</td>
+                                            <td class="text-start" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $item['waste'] }}">{{ $item['waste'] }}</td>
                                             <td>{{ $item['fkko'] }}</td>
                                             <td>{{ $item['hazard'] }}</td>
-                                            <td class="text-start">{{ $item['counterparty'] }}</td>
-                                            <td>{{ $item['amount'] }}</td>
+                                            <td class="fw-bold">{{ rtrim(rtrim(number_format($item['amount'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_process'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_util'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_neutr'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_store'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_bury'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td class="text-start" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $item['counterparty'] }}">{{ $item['counterparty'] }}</td>
+                                            <td>{{ $item['contract_details'] ?? '' }}</td>
+                                            <td>{{ $item['contract_validity'] ?? '' }}</td>
+                                            <td>{{ $item['license'] ?? '' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -269,26 +306,56 @@
 
                 <!-- Table 4 -->
                 <div class="tab-pane fade" id="sheet4">
-                    <div class="bg-white p-4 mx-auto shadow-sm" style="max-width: 297mm; min-height: 210mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif;">
+                    <div class="bg-white p-4 mx-auto shadow-sm" style="max-width: 350mm; min-height: 210mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif;">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-sm text-center align-middle caption-top" style="font-size: 0.85rem; border-color: #000;">
+                            <table class="table table-bordered table-sm text-center align-middle caption-top" style="font-size: 0.75rem; border-color: #000;">
                                 <caption style="color: #000; font-weight: bold;">Получено (Таблица 4)</caption>
                                 <thead class="table-light">
                                     <tr>
-                                        <th>№</th><th>Дата</th><th>№ акта</th><th>Наименование</th><th>ФККО</th><th>Класс</th><th>Поставщик</th><th>Кол-во (т)</th>
+                                        <th rowspan="3">N п/п</th>
+                                        <th rowspan="3">Наименование вида отхода</th>
+                                        <th rowspan="3">Код по ФККО</th>
+                                        <th rowspan="3">Класс опасности вида отхода</th>
+                                        <th colspan="7">Количество полученных отходов, тонн</th>
+                                        <th rowspan="3">Сведения о лицах, от которых получены отходы</th>
+                                        <th rowspan="3">Дата и номер договора на передачу отходов</th>
+                                        <th rowspan="3">Срок действия договора</th>
+                                        <th rowspan="3">Реквизиты лицензии на осуществление деятельности по сбору, транспортированию, обработке, утилизации, обезвреживанию, размещению отходов I-IV классов опасности</th>
+                                    </tr>
+                                    <tr>
+                                        <th rowspan="2">всего</th>
+                                        <th colspan="6">в том числе</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="min-width: 120px;">для накопления и последующей передачи другим индивидуальным предпринимателям и юридическим лицам</th>
+                                        <th>для обработки</th>
+                                        <th>для утилизации</th>
+                                        <th>для обезвреживания</th>
+                                        <th>для хранения</th>
+                                        <th>для захоронения</th>
+                                    </tr>
+                                    <tr class="text-muted" style="font-size: 0.7rem;">
+                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($journal->table4_data as $item)
                                         <tr>
                                             <td>{{ $loop->iteration }}</td>
-                                            <td>{{ $item['date'] }}</td>
-                                            <td>{{ $item['number'] }}</td>
-                                            <td class="text-start">{{ $item['waste'] }}</td>
+                                            <td class="text-start" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $item['waste'] }}">{{ $item['waste'] }}</td>
                                             <td>{{ $item['fkko'] }}</td>
                                             <td>{{ $item['hazard'] }}</td>
-                                            <td class="text-start">{{ $item['counterparty'] }}</td>
-                                            <td>{{ $item['amount'] }}</td>
+                                            <td class="fw-bold">{{ rtrim(rtrim(number_format($item['amount'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_third_party'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_process'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_util'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_neutr'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_store'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['amt_bury'] ?? 0, 3), '0'), '.') }}</td>
+                                            <td class="text-start" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $item['counterparty'] }}">{{ $item['counterparty'] }}</td>
+                                            <td>{{ $item['contract_details'] ?? '' }}</td>
+                                            <td>{{ $item['contract_validity'] ?? '' }}</td>
+                                            <td>{{ $item['license'] ?? '' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

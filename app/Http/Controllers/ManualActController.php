@@ -9,6 +9,20 @@ use Illuminate\Http\Request;
 
 class ManualActController extends Controller
 {
+    private function formatFkko($code)
+    {
+        $clean = str_replace(' ', '', $code);
+        if (strlen($clean) === 11) {
+            return substr($clean, 0, 1) . ' ' . 
+                   substr($clean, 1, 2) . ' ' . 
+                   substr($clean, 3, 3) . ' ' . 
+                   substr($clean, 6, 2) . ' ' . 
+                   substr($clean, 8, 2) . ' ' . 
+                   substr($clean, 10, 1);
+        }
+        return $code;
+    }
+
     /** Список доступных типов актов с их метаданными */
     private static function actTypes(): array
     {
@@ -131,17 +145,30 @@ class ManualActController extends Controller
         // Строки таблицы — строго 6 столбцов, без класса опасности
         $rows = '';
         $totalQuantity = 0;
+        
+        $providerStr = $actData['provider'] ?? '';
+        if (!empty($actData['contract_details'])) {
+            $providerStr .= ', ' . $actData['contract_details'];
+        }
+        
         foreach ($items as $index => $item) {
             $qty = (float)($item['quantity'] ?? 0);
             $totalQuantity += $qty;
+            
+            $opArr = array_map('trim', explode(',', $item['operation_type'] ?? ''));
+            $opArr = array_filter($opArr, function($op) {
+                return mb_strtolower($op) !== 'передача третьим лицам';
+            });
+            $opDocStr = implode(', ', $opArr);
+
             $rows .= "
                 <tr>
                     <td>" . ($index + 1) . "</td>
                     <td class='text-start'>" . htmlspecialchars($item['name'] ?? '') . "</td>
-                    <td>" . htmlspecialchars($item['fkko_code'] ?? '') . "</td>
+                    <td>" . htmlspecialchars($this->formatFkko($item['fkko_code'] ?? '')) . "</td>
                     <td>" . number_format($qty, 3, ',', '') . " т</td>
-                    <td class='text-start'>" . htmlspecialchars($actData['provider'] ?? '') . "</td>
-                    <td>" . htmlspecialchars($item['operation_type'] ?? '') . "</td>
+                    <td class='text-start'>" . htmlspecialchars($providerStr) . "</td>
+                    <td>" . htmlspecialchars($opDocStr) . "</td>
                 </tr>";
         }
         for ($i = 0; $i < 5; $i++) {

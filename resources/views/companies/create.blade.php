@@ -171,6 +171,18 @@
                         document.querySelector('input[name="kpp"]').value = data.kpp || '';
                         document.querySelector('input[name="ogrn"]').value = data.ogrn || '';
                         document.querySelector('input[name="legal_address"]').value = data.address || '';
+                        if (data.license_details) {
+                            document.querySelector('input[name="license_details"]').value = data.license_details;
+                        }
+                        if (data.contact_person) {
+                            document.querySelector('input[name="contact_person"]').value = data.contact_person;
+                        }
+                        if (data.phone) {
+                            document.querySelector('input[name="phone"]').value = data.phone;
+                        }
+                        if (data.email) {
+                            document.querySelector('input[name="email"]').value = data.email;
+                        }
                         
                         updateKpp();
                         alert('Данные успешно загружены!');

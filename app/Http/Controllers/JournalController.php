@@ -206,7 +206,20 @@ class JournalController extends Controller
             foreach ($items as $item) {
                 $name = $item['name'] ?? 'Unknown';
                 $qty = (float) ($item['quantity'] ?? 0);
-                $opItem = mb_strtolower($item['operation_type'] ?? '');
+                
+                $opItemOriginal = $item['operation_type'] ?? '';
+                $opArr = array_map('trim', explode(',', $opItemOriginal));
+                $opArr = array_filter($opArr, function($op) {
+                    return mb_strtolower($op) !== 'транспортирование';
+                });
+                
+                if (empty($opArr)) {
+                    continue; // Пропускаем, если выбрано ТОЛЬКО "Транспортирование"
+                }
+                
+                $opDisplay = implode(', ', $opArr);
+                $opItem = mb_strtolower($opDisplay);
+                
                 $fkko = $this->formatFkko($item['fkko_code'] ?? '');
                 $hazard = $item['hazard_class'] ?? '';
 
@@ -248,7 +261,15 @@ class JournalController extends Controller
                         'fkko' => $fkko,
                         'hazard' => $hazard,
                         'amount' => $qty,
-                        'operation' => $opItem
+                        'operation' => $opItem,
+                        'amt_process' => 0,
+                        'amt_util'    => 0,
+                        'amt_neutr'   => 0,
+                        'amt_store'   => 0,
+                        'amt_bury'    => 0,
+                        'contract_details'  => $data['contract_details'] ?? '',
+                        'contract_validity' => '',
+                        'license'           => $company->license_details ?? '',
                     ];
                 }
                 // Получение от других лиц
@@ -269,7 +290,15 @@ class JournalController extends Controller
                         'hazard' => $hazard,
                         'amount' => $qty,
                         'operation' => $opItem,
-                        'license' => $company->license_details // Лицензия получателя (наша) п.18
+                        'amt_third_party' => str_contains($opItem, 'третьим лицам') ? $qty : 0,
+                        'amt_process' => str_contains($opItem, 'обработ') ? $qty : 0,
+                        'amt_util'    => str_contains($opItem, 'утилиз') ? $qty : 0,
+                        'amt_neutr'   => str_contains($opItem, 'обезвреж') ? $qty : 0,
+                        'amt_store'   => str_contains($opItem, 'хран') ? $qty : 0,
+                        'amt_bury'    => str_contains($opItem, 'захорон') ? $qty : 0,
+                        'contract_details'  => $data['contract_details'] ?? '',
+                        'contract_validity' => '',
+                        'license'           => $company->license_details ?? '', // Лицензия получателя (наша) п.18
                     ];
                 }
             }
@@ -486,12 +515,12 @@ class JournalController extends Controller
 
         // Таблица 3
         $populate(3, $journal->table3_data, [
-            'date', 'number', 'waste', 'fkko', 'hazard', 'counterparty', 'amount'
+            'waste', 'fkko', 'hazard', 'amount', 'amt_process', 'amt_util', 'amt_neutr', 'amt_store', 'amt_bury', 'counterparty', 'contract_details', 'contract_validity', 'license'
         ], 11);
 
         // Таблица 4 (п. 18: включая лицензию в ст.14, если она в маппинге столбцов шаблона)
         $populate(4, $journal->table4_data, [
-            'date', 'number', 'waste', 'fkko', 'hazard', 'counterparty', 'amount', 'license'
+            'waste', 'fkko', 'hazard', 'amount', 'amt_third_party', 'amt_process', 'amt_util', 'amt_neutr', 'amt_store', 'amt_bury', 'counterparty', 'contract_details', 'contract_validity', 'license'
         ], 11);
 
         $filename = "ЖУДО_" . str_replace(' ', '_', $company->name) . "_" . $periodDate->format('Y-m') . ".xls";
