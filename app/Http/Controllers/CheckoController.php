@@ -16,14 +16,14 @@ class CheckoController extends Controller
 
     /**
      * Поиск компании по ИНН через сервис Checko.
-     * 
+     *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function findByInn(Request $request)
     {
         $inn = $request->query('inn');
-        
+
         if (!$inn || strlen($inn) < 10) {
             return response()->json(['error' => 'Неверный ИНН'], 400);
         }

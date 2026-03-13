@@ -190,7 +190,7 @@
                                         <label class="form-label d-block">Вид обращения</label>
                                         <div class="row">
                                             @php
-                                                // Только для печатной формы .doc — переносятся в нужный столбец ЖУДО
+
                                                 $operations = [
                                                     'temp-op2' => 'Утилизация',
                                                     'temp-op3' => 'Обезвреживание',
@@ -355,7 +355,7 @@
 
             const op8 = document.getElementById('temp-op8');
             const otherOps = document.querySelectorAll('[id^="temp-op"]:not(#temp-op8)');
-            
+
             if (op8) {
                 op8.disabled = true;
                 const updateOp8 = () => {
@@ -431,7 +431,7 @@
                 }
             });
         });
-    // --- ПОИСК КОМПАНИИ ПО ИНН (CHECKO API) ---
+
 async function findCompanyByInn(targetFieldId) {
     const inn = prompt('Введите ИНН организации для поиска:');
     if (!inn) return;
@@ -450,7 +450,7 @@ async function findCompanyByInn(targetFieldId) {
 
         const data = await response.json();
         const field = document.getElementById(targetFieldId);
-        
+
         if (data.name) {
             field.value = data.name;
             alert(`Найдена организация: ${data.name}`);

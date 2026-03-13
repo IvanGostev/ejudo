@@ -106,25 +106,63 @@
 
                 <!-- Titular -->
                 <div class="tab-pane fade show active" id="sheet1">
-                    <div class="bg-white p-5 mx-auto shadow-sm" style="max-width: 210mm; min-height: 297mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif;">
+                    <div class="bg-white p-5 mx-auto shadow-sm" style="max-width: 210mm; min-height: 297mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif; line-height: 1.3;">
                         
-                        <div class="text-center mt-4">
-                            <h2 class="fw-bold text-uppercase mb-2">ЖУРНАЛ УЧЕТА ДВИЖЕНИЯ ОТХОДОВ</h2>
-                            <div class="fs-5 mb-0">за <u>{{ $periodStr }}</u></div>
-                            <div class="small text-muted mb-3">(месяц, год)</div>
-                            
-                            <div class="mb-4">
-                                {{ $startDate->format('d.m.Y') }} - {{ $endDate->format('d.m.Y') }}
+                        <!-- Approval Block (Excel Style) -->
+                        <div class="row">
+                            <div class="col-5"></div>
+                            <div class="col-7 text-start">
+                                 <div class="fw-bold mb-1">УТВЕРЖДАЮ</div>
+                                 <div class="mb-3">Генеральный директор {{ $journal->company->name ?? 'ООО "Эко Полимер"' }}</div>
+                                 <div class="mt-4 pt-1">
+                                     <table class="w-100" style="border-collapse: collapse;">
+                                         <tr>
+                                             <td class="border-bottom border-dark text-center" style="width: 40%; height: 1.5em;"></td>
+                                             <td style="width: 10%;"></td>
+                                             <td class="border-bottom border-dark text-center fw-bold" style="width: 50%;">{{ $journal->company->contact_person ?? '' }}</td>
+                                         </tr>
+                                         <tr>
+                                             <td class="text-center" style="font-size: 7.5pt; vertical-align: top;">(подпись)</td>
+                                             <td></td>
+                                             <td class="text-center" style="font-size: 7.5pt; vertical-align: top;">(Ф.И.О.)</td>
+                                         </tr>
+                                     </table>
+                                 </div>
+                                 <div class="mt-3">{{ date('d') }} {{ \Carbon\Carbon::now()->translatedFormat('F') }} {{ date('Y') }} г.</div>
                             </div>
-                            <div class="small text-muted" style="margin-top: -1.5rem;">(дата начала ведения журнала) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (дата окончания ведения журнала)</div>
                         </div>
 
-                        <div class="mt-5">
-                            <div class="mb-2">
-                                <div>Наименование индивидуального предпринимателя или юридического лица:</div>
-                                <div class="border-bottom border-dark text-center fw-bold" style="line-height: 1.5;">
-                                    {{ $journal->company->name ?? '' }}
-                                </div>
+                         <!-- Title -->
+                        <div class="text-center mt-5 mb-5 pt-5">
+                            <h2 class="fw-bold mb-0" style="font-size: 18pt;">Журнал учета движения отходов</h2>
+                        </div>
+
+                        <!-- Facility Name (Excel style) -->
+                        <div class="text-center mt-4 pt-5">
+                            <div class="border-bottom border-dark fw-bold mb-1" style="min-height: 1.5em; line-height: 1.2;">{{ $journal->company->name ?? '' }}</div>
+                            <div class="small" style="font-size: 8pt;">(наименование объекта, оказывающего негативное воздействие на окружающую среду)</div>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <div class="border-bottom border-dark mb-1" style="min-height: 1.5em;">&nbsp;</div>
+                            <div class="small" style="font-size: 8pt;">(категория объекта)</div>
+                        </div>
+
+                        <!-- Company Name (Excel style) -->
+                        <div class="text-center mt-5 pt-4">
+                            <div class="border-bottom border-dark fw-bold mb-1" style="min-height: 1.5em; line-height: 1.2;">{{ $journal->company->contact_person ?? '' }}</div>
+                            <div class="small" style="font-size: 8pt;">(наименование юридического лица, индивидуального предпринимателя)</div>
+                        </div>
+
+                        <!-- Dates (Excel style) -->
+                        <div class="mt-5 pt-5">
+                            <div class="d-flex align-items-center mb-4">
+                                <div class="me-3" style="width: 80px;">начато</div>
+                                <div class="border-bottom border-dark flex-grow-1 text-center fw-bold">{{ $startDate->format('d.m.Y') }}</div>
+                            </div>
+                            <div class="d-flex align-items-center mb-4">
+                                <div class="me-3" style="width: 80px;">окончен</div>
+                                <div class="border-bottom border-dark flex-grow-1 text-center fw-bold">{{ $endDate->format('d.m.Y') }}</div>
                             </div>
                         </div>
                     </div>
@@ -182,7 +220,7 @@
                     <div class="bg-white p-4 mx-auto shadow-sm" style="max-width: 350mm; min-height: 210mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif;">
                         <div class="table-responsive">
                             <table class="table table-bordered table-sm text-center align-middle caption-top"
-                                style="font-size: 0.75rem; border-color: #000;">
+                                style="font-size: 0.7rem; border-color: #000;">
                                 <caption style="color: #000; font-weight: bold;">Обобщенные данные (Таблица 2)</caption>
                                  <thead class="table-light">
                                     <tr>
@@ -190,27 +228,26 @@
                                         <th rowspan="2">Наименование вида отхода</th>
                                         <th rowspan="2">Код по ФККО</th>
                                         <th rowspan="2">Класс опасности</th>
-                                        <th colspan="2">Наличие отходов на начало, тонн</th>
-                                        <th rowspan="2">Образовано отходов, тонн</th>
-                                        <th rowspan="2">Получено отходов, тонн</th>
-                                        <th rowspan="2">Обработано отходов, тонн</th>
-                                        <th rowspan="2">Утилизировано отходов, тонн</th>
-                                        <th rowspan="2">Обезврежено отходов, тонн</th>
-                                        <th rowspan="2">Передано отходов, тонн</th>
-                                        <th colspan="3">Размещено отходов, тонн</th>
-                                        <th colspan="2">Наличие отходов на конец, тонн</th>
+                                        <th rowspan="2" style="min-width: 60px;">На начало, тонн</th>
+                                        <th rowspan="2" style="min-width: 60px;">Образовано, тонн</th>
+                                        <th rowspan="2" style="min-width: 60px;">Получено, тонн</th>
+                                        <th rowspan="2" style="min-width: 60px;">Обработано, тонн</th>
+                                        <th rowspan="2" style="min-width: 60px;">Утилизировано, тонн</th>
+                                        <th rowspan="2" style="min-width: 60px;">Обезврежено, тонн</th>
+                                        <th rowspan="2" style="min-width: 60px;">Передано (всего), тонн</th>
+                                        <th colspan="5">В том числе передано для:</th>
+                                        <th rowspan="2" style="min-width: 60px;">Размещено (хранение), тонн</th>
+                                        <th rowspan="2" style="min-width: 60px;">На конец, тонн</th>
                                     </tr>
                                     <tr>
-                                        <th>Хранение</th>
-                                        <th>Накопление</th>
-                                        <th>Всего</th>
-                                        <th>Хранение</th>
-                                        <th>Захоронение</th>
-                                        <th>Хранение</th>
-                                        <th>Накопление</th>
+                                        <th>обраб.</th>
+                                        <th>утил.</th>
+                                        <th>обезвреж.</th>
+                                        <th>хран.</th>
+                                        <th>захорон.</th>
                                     </tr>
-                                    <tr class="text-muted" style="font-size: 0.7rem;">
-                                        <th>А</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th>
+                                    <tr class="text-muted" style="font-size: 0.65rem;">
+                                        <th>А</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -218,30 +255,26 @@
                                     @forelse($journal->table2_data as $item)
                                         <tr>
                                             <td>{{ $row++ }}</td>
-                                            <td class="text-start" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $item['name'] }}">{{ $item['name'] }}</td>
+                                            <td class="text-start" style="max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $item['name'] }}">{{ $item['name'] }}</td>
                                             <td>{{ $item['fkko'] }}</td>
                                             <td>{{ $item['hazard'] }}</td>
-                                            <td>-</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['balance_begin'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['generated'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['received'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['processed'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['utilized'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['neutralized'] ?? 0, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['transferred_total'] ?? 0, 3), '0'), '.') }}</td>
-                                            @php
-                                                $stored = $item['stored'] ?? 0;
-                                                $buried = $item['buried'] ?? 0;
-                                                $placed_total = $stored + $buried;
-                                            @endphp
-                                            <td>{{ rtrim(rtrim(number_format($placed_total, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($stored, 3), '0'), '.') }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($buried, 3), '0'), '.') }}</td>
-                                            <td>-</td>
-                                            <td><strong>{{ rtrim(rtrim(number_format($item['balance_end'] ?? 0, 3), '0'), '.') }}</strong></td>
+                                            <td>{{ rtrim(rtrim(number_format($item['balance_begin'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['generated'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['received'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['processed'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['utilized'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['neutralized'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['transferred_total'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['trans_process'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['trans_util'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['trans_neutr'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['trans_store'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['trans_bury'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['stored'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td class="fw-bold">{{ rtrim(rtrim(number_format($item['balance_end'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="17">Нет данных</td></tr>
+                                        <tr><td colspan="18">Нет данных</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

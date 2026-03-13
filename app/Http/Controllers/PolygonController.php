@@ -41,7 +41,7 @@ class PolygonController extends Controller
     {
         $company = $this->getCompany();
 
-        // Ограничение на максимальное количество полигонов
+
         if ($company->polygons()->count() >= self::MAX_POLYGONS) {
             return back()->with('error', 'Достигнут максимальный лимит полигонов (' . self::MAX_POLYGONS . ').');
         }

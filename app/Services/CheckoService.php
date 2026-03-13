@@ -17,7 +17,7 @@ class CheckoService
 
     /**
      * Поиск компании по ИНН.
-     * 
+     *
      * @param string $inn
      * @return array|null
      */
@@ -38,28 +38,28 @@ class CheckoService
 
             if ($response->successful()) {
                 $data = $response->json();
-                
+
                 if (isset($data['data'])) {
                     $item = $data['data'];
-                    // According to api response schema
+
                     $fullName = $item['НаимПолн'] ?? $item['НаимСокр'] ?? '';
-                    
-                    // Try to use OKOPF for type, fallback to fullName parsing
+
+
                     $type = '';
                     $okopfName = mb_strtolower($item['ОКОПФ']['Наим'] ?? '');
                     $shortName = $item['НаимСокр'] ?? '';
                     $fullName = $item['НаимПолн'] ?? '';
 
                     $knownTypes = [
-                        'ИП', 'ООО', 'ПАО', 'АО', 'ЗАО', 'ОАО', 
-                        'МУП', 'ГУП', 'ФГУП', 
+                        'ИП', 'ООО', 'ПАО', 'АО', 'ЗАО', 'ОАО',
+                        'МУП', 'ГУП', 'ФГУП',
                         'МБУ', 'ГБУ', 'ФГБУ', 'МАУ', 'ГАУ', 'ФГАУ', 'МКУ', 'ГКУ', 'ФКУ',
-                        'АНО', 'ТСЖ', 'ТСН', 'СНТ', 'ДНТ', 'КФХ', 
+                        'АНО', 'ТСЖ', 'ТСН', 'СНТ', 'ДНТ', 'КФХ',
                         'МБДОУ', 'МАДОУ', 'МБОУ', 'МАОУ', 'ГБОУ', 'ГКДОУ', 'ГКОУ',
                         'ЧОУ', 'НОУ', 'ПК', 'ПО'
                     ];
 
-                    // Try to extract from short name first (it often starts or ends with the abbreviation)
+
                     if ($shortName) {
                         $shortNameClean = trim(preg_replace('/["\'«»]/', '', $shortName));
                         $parts = explode(' ', $shortNameClean);
@@ -76,7 +76,7 @@ class CheckoService
                         }
                     }
 
-                    // If not found from short name, try to guess from ОКОПФ or Full Name
+
                     if (!$type) {
                         if (mb_strpos($okopfName, 'индивидуальные предприниматели') !== false || mb_stripos($fullName, 'Индивидуальный предприниматель') !== false || mb_stripos($fullName, 'ИП ') === 0) {
                             $type = 'ИП';
@@ -111,7 +111,7 @@ class CheckoService
                         }
                     }
 
-                    // Extract License details
+
                     $licenseDetails = '';
                     if (isset($item['Лиценз']) && is_array($item['Лиценз'])) {
                         foreach ($item['Лиценз'] as $lic) {
@@ -124,7 +124,7 @@ class CheckoService
                                     }
                                 }
                             }
-                            
+
                             if ($isWasteLicense || $licenseDetails === '') {
                                 $num = $lic['Номер'] ?? '';
                                 $date = $lic['ДатаНач'] ?? $lic['Дата'] ?? '';
@@ -135,9 +135,9 @@ class CheckoService
                                     }
                                 }
                                 $org = $lic['ЛицОрг'] ?? '';
-                                
+
                                 $licenseDetails = trim(sprintf("№ %s от %s, выд. %s", $num, $date, $org));
-                                
+
                                 if ($isWasteLicense) {
                                     break;
                                 }
@@ -145,7 +145,7 @@ class CheckoService
                         }
                     }
 
-                    // Extract Contact Details
+
                     $contactPerson = '';
                     if (!empty($item['Руковод']) && is_array($item['Руковод'])) {
                         $contactPerson = current($item['Руковод'])['ФИО'] ?? '';
@@ -175,7 +175,7 @@ class CheckoService
                     ];
                 }
             }
-            
+
             Log::warning('Checko API response error: ' . $response->body());
             return null;
 

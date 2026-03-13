@@ -10,7 +10,7 @@ class PolygonForm
     {
         return $schema
             ->components([
-                //
+
             ]);
     }
 }

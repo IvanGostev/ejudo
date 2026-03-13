@@ -119,7 +119,7 @@
                             step = 'verify';
                             $('#code-group').removeClass('d-none');
                             $('#submit-btn').text('Войти');
-                            $('#alert-container').html('<div class="alert alert-success">Код отправлен на почту!</div>');
+                            $('#alert-container').html('<div class="alert alert-success">Код отправлен на почту! Возможно, проверьте папку спам.</div>');
                         })
                         .fail(function (err) {
                             const msg = err.responseJSON?.message || 'Ошибка отправки кода';

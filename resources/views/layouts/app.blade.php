@@ -119,7 +119,7 @@
             background-color: #1f1f1f !important;
         }
     </style>
-    
+
     @stack('styles')
 
     <!-- Favicon -->
@@ -155,7 +155,7 @@
                 @auth
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ request()->routeIs('dashboard') || request()->routeIs('acts.*') ? 'active' : '' }}" 
+                        <a class="nav-link dropdown-toggle {{ request()->routeIs('dashboard') || request()->routeIs('acts.*') ? 'active' : '' }}"
                            href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             АКТЫ
                         </a>

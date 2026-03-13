@@ -232,7 +232,7 @@
                                                     </td>
                                                     <td>
                                                         <span
-                                                            class="badge rounded-pill fw-normal px-3 py-1 
+                                                            class="badge rounded-pill fw-normal px-3 py-1
                                                                 @if($payout->status === 'pending') bg-warning-subtle text-warning @elseif($payout->status === 'completed') bg-success-subtle text-success @else bg-danger-subtle text-danger @endif">
                                                             @if($payout->status === 'pending') В обработке
                                                             @elseif($payout->status === 'completed') Выплачено @else Отклонено

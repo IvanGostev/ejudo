@@ -164,7 +164,7 @@
                     }
 
                     const data = await response.json();
-                    
+
                     if (data.name) {
                         document.querySelector('input[name="name"]').value = data.name;
                         document.querySelector('input[name="type"]').value = data.type || '';
@@ -183,7 +183,7 @@
                         if (data.email) {
                             document.querySelector('input[name="email"]').value = data.email;
                         }
-                        
+
                         updateKpp();
                         alert('Данные успешно загружены!');
                     } else {

@@ -24,7 +24,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->json('coordinates')->nullable();
             $table->timestamps();
-            
+
             $table->index('company_id');
             $table->index('status');
         });

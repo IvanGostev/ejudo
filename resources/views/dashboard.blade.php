@@ -12,7 +12,7 @@
                 </button>
                 <div class="dropdown-menu dropdown-menu-end shadow p-3" style="min-width: 700px; background-color: #fff; border: 1px solid #dee2e6;">
                     <!-- All Time -->
-                    <a class="btn w-100 mb-3 fw-bold {{ $selectedPeriod === 'all' ? 'btn-dark text-white' : 'btn-light text-dark' }}" 
+                    <a class="btn w-100 mb-3 fw-bold {{ $selectedPeriod === 'all' ? 'btn-dark text-white' : 'btn-light text-dark' }}"
                        style="{{ $selectedPeriod === 'all' ? 'background-color: #000218; border-color: #000218;' : 'background-color: #f8f9fa;' }}"
                        href="{{ route('dashboard', ['period' => 'all']) }}">
                         За все время
@@ -27,7 +27,7 @@
                             <div class="d-grid gap-1">
                                 @foreach($periods as $key => $label)
                                     @if(strlen((string)$key) === 4 && is_numeric($key))
-                                        <a class="btn btn-sm text-start {{ $selectedPeriod === (string)$key ? 'btn-dark text-white' : 'btn-light text-dark bg-transparent' }}" 
+                                        <a class="btn btn-sm text-start {{ $selectedPeriod === (string)$key ? 'btn-dark text-white' : 'btn-light text-dark bg-transparent' }}"
                                            style="{{ $selectedPeriod === (string)$key ? 'background-color: #000218; border-color: #000218;' : '' }}"
                                            href="{{ route('dashboard', ['period' => $key]) }}">
                                            {{ $label }}
@@ -45,7 +45,7 @@
                             <div class="d-grid gap-1">
                                 @foreach($periods as $key => $label)
                                     @if(str_contains($key, '-Q'))
-                                        <a class="btn btn-sm text-start {{ $selectedPeriod === (string)$key ? 'btn-dark text-white' : 'btn-light text-dark bg-transparent' }}" 
+                                        <a class="btn btn-sm text-start {{ $selectedPeriod === (string)$key ? 'btn-dark text-white' : 'btn-light text-dark bg-transparent' }}"
                                            style="{{ $selectedPeriod === (string)$key ? 'background-color: #000218; border-color: #000218;' : '' }}"
                                            href="{{ route('dashboard', ['period' => $key]) }}">
                                             {{ $label }}
@@ -64,7 +64,7 @@
                                 @foreach($periods as $key => $label)
                                     @if(strlen((string)$key) === 7 && str_contains($key, '-') && !str_contains($key, 'Q'))
                                         <div class="col-6">
-                                            <a class="btn btn-sm w-100 text-start text-truncate {{ $selectedPeriod === (string)$key ? 'btn-dark text-white' : 'btn-light text-dark bg-transparent' }}" 
+                                            <a class="btn btn-sm w-100 text-start text-truncate {{ $selectedPeriod === (string)$key ? 'btn-dark text-white' : 'btn-light text-dark bg-transparent' }}"
                                                style="{{ $selectedPeriod === (string)$key ? 'background-color: #000218; border-color: #000218;' : '' }}"
                                                href="{{ route('dashboard', ['period' => $key]) }}" title="{{ $label }}">
                                                 {{ $label }}
@@ -335,7 +335,7 @@
             const tr = btn.closest('tr');
             const actId = tr.data('act-id');
             const itemIndex = tr.data('item-index');
-            
+
             $.ajax({
                 url: '/acts/' + actId + '/item/' + itemIndex,
                 method: 'POST',
@@ -382,9 +382,9 @@
 
             input.on('blur keypress', function(e) {
                 if (e.type === 'keypress' && e.which !== 13) return;
-                
+
                 const newVal = $(this).val();
-                
+
                 if (newVal == currentVal) {
                     td.html(originalHtml);
                     return;
@@ -409,7 +409,7 @@
                             tr.attr('data-item-index', response.new_item_index);
                         }
 
-                        
+
                         td.data('value', newVal);
 
                         if (field === 'date') {
@@ -423,10 +423,10 @@
                         } else {
                             td.html(newVal);
                         }
-                        
+
                         td.addClass('bg-success text-white');
                         setTimeout(() => td.removeClass('bg-success text-white'), 1000);
-                        
+
                         refreshTables();
                     },
                     error: function (xhr) {

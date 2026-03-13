@@ -12,17 +12,17 @@ class PolygonModeService
     {
         return $company && $company->polygons()->exists();
     }
-    
+
     public static function getJournalBaseQuery(?UserCompany $company): Builder
     {
         $query = JudoJournal::where('company_id', $company->id);
-        
+
         if (self::isEnabled($company)) {
-            // В режиме полигонов показываем все записи (и привязанные, и нет)
+
             return $query;
         }
-        
-        // В обычном режиме показываем только записи компании
+
+
         return $query->whereNull('polygon_id');
     }
 }

@@ -19,11 +19,11 @@ class JournalController extends Controller
     {
         $clean = str_replace(' ', '', $code);
         if (strlen($clean) === 11) {
-            return substr($clean, 0, 1) . ' ' . 
-                   substr($clean, 1, 2) . ' ' . 
-                   substr($clean, 3, 3) . ' ' . 
-                   substr($clean, 6, 2) . ' ' . 
-                   substr($clean, 8, 2) . ' ' . 
+            return substr($clean, 0, 1) . ' ' .
+                   substr($clean, 1, 2) . ' ' .
+                   substr($clean, 3, 3) . ' ' .
+                   substr($clean, 6, 2) . ' ' .
+                   substr($clean, 8, 2) . ' ' .
                    substr($clean, 10, 1);
         }
         return $code;
@@ -39,7 +39,7 @@ class JournalController extends Controller
             ? $company->polygons()->where('status', 'active')->orderBy('name')->get()
             : collect();
 
-        // Фильтр по полигону (GET-параметр polygon_id)
+
         $selectedPolygonId = $hasPolygons ? $request->query('polygon_id') : null;
         $selectedPolygon   = null;
 
@@ -98,7 +98,7 @@ class JournalController extends Controller
             'polygon_id.exists'   => 'Выбранный полигон не найден.',
         ]);
 
-        // Дополнительно проверяем, что полигон принадлежит этой компании
+
         $polygonId = null;
         if ($hasPolygons) {
             $polygon = $company->polygons()->findOrFail($request->integer('polygon_id'));
@@ -154,14 +154,14 @@ class JournalController extends Controller
             return back()->with('error', 'Неверный формат периода: ' . $periodInput);
         }
 
-        // Поиск последнего журнала
+
         $prevJournal = JudoJournal::where('company_id', $company->id)
             ->where('period', '<', $startDate->format('Y-m-d'))
             ->where('role', $roleKey)
             ->orderBy('period', 'desc')
             ->first();
 
-        // Проверяем актуальность остатков
+
         $prevBalances = [];
         $wasteStats = [];
 
@@ -198,7 +198,7 @@ class JournalController extends Controller
             $provider = mb_strtolower($data['provider'] ?? '');
             $receiver = mb_strtolower($data['receiver'] ?? '');
             $compName = mb_strtolower($company->name);
-            
+
             $isWasteGenerator = (str_contains($provider, $compName));
             $isWasteRecipient = (str_contains($receiver, $compName));
             $isInternal = ($isWasteRecipient && $isWasteGenerator);
@@ -206,28 +206,28 @@ class JournalController extends Controller
             foreach ($items as $item) {
                 $name = $item['name'] ?? 'Unknown';
                 $qty = (float) ($item['quantity'] ?? 0);
-                
+
                 $opItemOriginal = $item['operation_type'] ?? '';
                 $opArr = array_map('trim', explode(',', $opItemOriginal));
                 $opArr = array_filter($opArr, function($op) {
                     return mb_strtolower($op) !== 'транспортирование';
                 });
-                
+
                 if (empty($opArr)) {
-                    continue; // Пропускаем, если выбрано ТОЛЬКО "Транспортирование"
+                    continue;
                 }
-                
+
                 $opDisplay = implode(', ', $opArr);
                 $opItem = mb_strtolower($opDisplay);
-                
+
                 $fkko = $this->formatFkko($item['fkko_code'] ?? '');
                 $hazard = $item['hazard_class'] ?? '';
 
                 if (!isset($wasteStats[$name])) {
                     $wasteStats[$name] = $this->emptyStats($fkko, $hazard);
                 }
-                
-                // Внутренние операции (Сами себе передали или образовали)
+
+
                 if ($isInternal || (str_contains($opItem, 'образован'))) {
                     if (str_contains($opItem, 'образован')) $wasteStats[$name]['generated'] += $qty;
                     if (str_contains($opItem, 'обработ')) $wasteStats[$name]['processed'] += $qty;
@@ -235,8 +235,8 @@ class JournalController extends Controller
                     if (str_contains($opItem, 'обезвреж')) $wasteStats[$name]['neutralized'] += $qty;
                     if (str_contains($opItem, 'хран')) $wasteStats[$name]['stored'] += $qty;
                     if (str_contains($opItem, 'захорон')) $wasteStats[$name]['buried'] += $qty;
-                } 
-                // Передача другим лицам
+                }
+
                 elseif ($isWasteGenerator) {
                     $wasteStats[$name]['transferred_total'] += $qty;
                     if (str_contains($opItem, 'обработ')) {
@@ -244,7 +244,7 @@ class JournalController extends Controller
                     } elseif (str_contains($opItem, 'утилиз')) {
                         $wasteStats[$name]['trans_util'] += $qty;
                     } elseif (str_contains($opItem, 'обезвреж')) {
-                        // Передано на обезвреживание → в Excel ст.14 (trans_neutr) И ст.10 (neutralized)
+
                         $wasteStats[$name]['trans_neutr']   += $qty;
                         $wasteStats[$name]['neutralized']   += $qty;
                     } elseif (str_contains($opItem, 'хран')) {
@@ -272,7 +272,7 @@ class JournalController extends Controller
                         'license'           => $company->license_details ?? '',
                     ];
                 }
-                // Получение от других лиц
+
                 elseif ($isWasteRecipient) {
                     $wasteStats[$name]['received'] += $qty;
                     if (str_contains($opItem, 'обработ')) $wasteStats[$name]['processed'] += $qty;
@@ -298,7 +298,7 @@ class JournalController extends Controller
                         'amt_bury'    => str_contains($opItem, 'захорон') ? $qty : 0,
                         'contract_details'  => $data['contract_details'] ?? '',
                         'contract_validity' => '',
-                        'license'           => $company->license_details ?? '', // Лицензия получателя (наша) п.18
+                        'license'           => $company->license_details ?? '',
                     ];
                 }
             }
@@ -309,10 +309,10 @@ class JournalController extends Controller
         foreach ($uniqueWastes as $wasteName) {
             $start = $prevBalances[$wasteName] ?? 0;
             $s = $wasteStats[$wasteName];
-            
-            // Расчет конечного остатка (п. 16: накопление - это все, что осталось)
+
+
             $end = $start + $s['generated'] + $s['received'] - $s['processed'] - $s['utilized'] - $s['neutralized'] - $s['transferred_total'] - $s['buried'];
-            
+
             $table2[] = [
                 'name' => $wasteName,
                 'fkko' => $s['fkko'],
@@ -331,7 +331,7 @@ class JournalController extends Controller
                 'trans_bury' => $s['trans_bury'],
                 'stored' => $s['stored'],
                 'buried' => $s['buried'],
-                'accumulated' => $end, // Накопление ст.16 в веб-журнале
+                'accumulated' => $end,
                 'balance_end' => $end
             ];
         }
@@ -392,7 +392,7 @@ class JournalController extends Controller
         $polygonId = $request->input('polygon_id');
 
         if ($polygonId) {
-            // Проверяем что полигон принадлежит компании
+
             $company->polygons()->findOrFail($polygonId);
         }
 
@@ -465,19 +465,12 @@ class JournalController extends Controller
             $endDate = $periodDate->copy()->endOfQuarter();
         }
 
-        // Лист 0: Титульный (п.15: явно задаём строковый формат для дат)
-        $sheet0 = $spreadsheet->getSheet(0);
-        $sheet0->setCellValue('C12', $periodStr);
-        // Устанавливаем даты как строки, чтобы Excel не переконвертировал их
-        $sheet0->setCellValueExplicit('C14', $startDate->format('d.m.Y'), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-        $sheet0->setCellValueExplicit('E14', $endDate->format('d.m.Y'),   \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-        
-        $sheet0->setCellValue('C17', $company->name);
-        $sheet0->setCellValue('C19', $company->inn);
-        $sheet0->setCellValue('C21', $company->ogrn);
-        $sheet0->setCellValue('C23', $company->legal_address);
 
-        // Функция-помощник для заполнения таблиц с центрированием (п. 14)
+        $sheet0 = $spreadsheet->getSheet(0);
+        // Резервные поля удалены по просьбе пользователя, так как они отображались некорректно слева
+
+
+
         $populate = function($sheetIdx, $data, $columns, $startRow = 11) use ($spreadsheet) {
             $sheet = $spreadsheet->getSheet($sheetIdx);
             $r = $startRow;
@@ -486,14 +479,14 @@ class JournalController extends Controller
                 $numCell->setValue($idx + 1);
                 $sheet->getStyle('A'.$r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-                $colIndex = 1; // Колонки B, C, D...
+                $colIndex = 1;
                 foreach ($columns as $key) {
                     $val = $item[$key] ?? '-';
                     $colLetter = Coordinate::stringFromColumnIndex($colIndex + 1);
                     $cell = $sheet->getCell($colLetter . $r);
                     $cell->setValue($val === 0 ? '-' : $val);
 
-                    // Центрирование всех ячеек (п. 14)
+
                     $sheet->getStyle($colLetter . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     $colIndex++;
                 }
@@ -501,24 +494,24 @@ class JournalController extends Controller
             }
         };
 
-        // Таблица 1
+
         $populate(1, $journal->table1_data, ['name', 'fkko', 'hazard'], 11);
 
-        // Таблица 2 (п. 16: маппинг 17 столбцов)
-        // Ст.11 - transferred_total, Ст.12 - trans_process, Ст.13 - trans_util, Ст.14 - trans_neutr
+
+
         $populate(2, $journal->table2_data, [
-            'name', 'fkko', 'hazard', 'balance_begin', 'generated', 'received', 
-            'processed', 'utilized', 'neutralized', 'transferred_total', 
+            'name', 'fkko', 'hazard', 'balance_begin', 'generated', 'received',
+            'processed', 'utilized', 'neutralized', 'transferred_total',
             'trans_process', 'trans_util', 'trans_neutr', 'trans_store', 'trans_bury',
-            'stored', 'balance_end' 
+            'stored', 'balance_end'
         ], 13);
 
-        // Таблица 3
+
         $populate(3, $journal->table3_data, [
             'waste', 'fkko', 'hazard', 'amount', 'amt_process', 'amt_util', 'amt_neutr', 'amt_store', 'amt_bury', 'counterparty', 'contract_details', 'contract_validity', 'license'
         ], 11);
 
-        // Таблица 4 (п. 18: включая лицензию в ст.14, если она в маппинге столбцов шаблона)
+
         $populate(4, $journal->table4_data, [
             'waste', 'fkko', 'hazard', 'amount', 'amt_third_party', 'amt_process', 'amt_util', 'amt_neutr', 'amt_store', 'amt_bury', 'counterparty', 'contract_details', 'contract_validity', 'license'
         ], 11);

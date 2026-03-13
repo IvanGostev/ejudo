@@ -77,7 +77,7 @@ class TinkoffPaymentService
 
     /**
      * Get Payment State
-     * 
+     *
      * @param string $paymentId Tinkoff Payment ID
      * @return array|null
      */
@@ -101,7 +101,7 @@ class TinkoffPaymentService
 
     /**
      * Confirm Payment (for 2-step payments)
-     * 
+     *
      * @param string $paymentId Tinkoff Payment ID
      * @param int|null $amountKopecks Amount to confirm (optional)
      * @return array|null

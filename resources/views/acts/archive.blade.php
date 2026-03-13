@@ -210,16 +210,16 @@
                                                                          <td>
                                                                             @php
                                                                                 $rawCode = $item['fkko_code'] ?? '';
-                                                                                // Удаляем все пробелы и форматируем заново X XX XXX XX XX X
+
                                                                                 $cleanCode = str_replace(' ', '', $rawCode);
                                                                                 $formattedCode = $rawCode;
                                                                                 if (strlen($cleanCode) === 11) {
-                                                                                    // 4 05 211 01 52 4 -> 1 2 3 2 2 1
-                                                                                    $formattedCode = substr($cleanCode, 0, 1) . ' ' . 
-                                                                                                   substr($cleanCode, 1, 2) . ' ' . 
-                                                                                                   substr($cleanCode, 3, 3) . ' ' . 
-                                                                                                   substr($cleanCode, 6, 2) . ' ' . 
-                                                                                                   substr($cleanCode, 8, 2) . ' ' . 
+
+                                                                                    $formattedCode = substr($cleanCode, 0, 1) . ' ' .
+                                                                                                   substr($cleanCode, 1, 2) . ' ' .
+                                                                                                   substr($cleanCode, 3, 3) . ' ' .
+                                                                                                   substr($cleanCode, 6, 2) . ' ' .
+                                                                                                   substr($cleanCode, 8, 2) . ' ' .
                                                                                                    substr($cleanCode, 10, 1);
                                                                                 }
                                                                             @endphp
@@ -279,11 +279,11 @@
                                                                         $cleanCode = str_replace(' ', '', $code);
                                                                         $formattedCode = $code;
                                                                         if (strlen($cleanCode) === 11) {
-                                                                            $formattedCode = substr($cleanCode, 0, 1) . ' ' . 
-                                                                                           substr($cleanCode, 1, 2) . ' ' . 
-                                                                                           substr($cleanCode, 3, 3) . ' ' . 
-                                                                                           substr($cleanCode, 6, 2) . ' ' . 
-                                                                                           substr($cleanCode, 8, 2) . ' ' . 
+                                                                            $formattedCode = substr($cleanCode, 0, 1) . ' ' .
+                                                                                           substr($cleanCode, 1, 2) . ' ' .
+                                                                                           substr($cleanCode, 3, 3) . ' ' .
+                                                                                           substr($cleanCode, 6, 2) . ' ' .
+                                                                                           substr($cleanCode, 8, 2) . ' ' .
                                                                                            substr($cleanCode, 10, 1);
                                                                         }
                                                                     @endphp

@@ -18,17 +18,17 @@ class FkkoController extends Controller
         $results = \App\Models\FkkoCode::query();
 
         if ($query) {
-            // Нормализуем запрос: убираем лишние пробелы для поиска по имени/коду
+
             $queryNormalized = preg_replace('/\s+/', ' ', trim($query));
-            // Для поиска без пробелов — убираем все пробелы из запроса
+
             $queryNoSpaces = preg_replace('/\s+/', '', $query);
 
             $results->where(function ($q) use ($queryNormalized, $queryNoSpaces) {
-                // Поиск по имени (с нормализованными пробелами)
+
                 $q->where('name', 'like', "%{$queryNormalized}%")
-                  // Поиск по коду как есть (с пробелами)
+
                   ->orWhere('code', 'like', "%{$queryNormalized}%")
-                  // Поиск по коду без пробелов (пользователь ввёл без пробелов)
+
                   ->orWhereRaw("REPLACE(code, ' ', '') LIKE ?", ["%{$queryNoSpaces}%"]);
             });
         }
@@ -36,7 +36,7 @@ class FkkoController extends Controller
         $data = $results->limit(50)->get()->map(function ($item) {
             return [
                 'id'           => $item->id,
-                'code'         => $item->code,         // с пробелами для отображения
+                'code'         => $item->code,
                 'name'         => $item->name,
                 'hazard_class' => $item->hazard_class,
             ];

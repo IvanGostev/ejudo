@@ -13,11 +13,11 @@ class ManualActController extends Controller
     {
         $clean = str_replace(' ', '', $code);
         if (strlen($clean) === 11) {
-            return substr($clean, 0, 1) . ' ' . 
-                   substr($clean, 1, 2) . ' ' . 
-                   substr($clean, 3, 3) . ' ' . 
-                   substr($clean, 6, 2) . ' ' . 
-                   substr($clean, 8, 2) . ' ' . 
+            return substr($clean, 0, 1) . ' ' .
+                   substr($clean, 1, 2) . ' ' .
+                   substr($clean, 3, 3) . ' ' .
+                   substr($clean, 6, 2) . ' ' .
+                   substr($clean, 8, 2) . ' ' .
                    substr($clean, 10, 1);
         }
         return $code;
@@ -127,7 +127,7 @@ class ManualActController extends Controller
         $dateRus = \Carbon\Carbon::parse($actData['date'] ?? now())->format('d.m.Y');
         $items   = $actData['items'] ?? [];
 
-        // Вторая строка шапки в зависимости от типа акта
+
         $typeSubtitles = [
             'transfer'       => 'О ПЕРЕДАЧЕ ОТХОДОВ III–V КЛАССА ОПАСНОСТИ',
             'processing'     => 'ОБ ОБРАБОТКЕ ОТХОДОВ III–V КЛАССА ОПАСНОСТИ',
@@ -142,19 +142,19 @@ class ManualActController extends Controller
         $typeShort = str_replace([' ', '/'], '_', mb_strtoupper($act->getTypeLabel(), 'UTF-8'));
         $filename  = "{$typeShort}_{$act->act_number}_{$dateStr}.doc";
 
-        // Строки таблицы — строго 6 столбцов, без класса опасности
+
         $rows = '';
         $totalQuantity = 0;
-        
+
         $providerStr = $actData['provider'] ?? '';
         if (!empty($actData['contract_details'])) {
             $providerStr .= ', ' . $actData['contract_details'];
         }
-        
+
         foreach ($items as $index => $item) {
             $qty = (float)($item['quantity'] ?? 0);
             $totalQuantity += $qty;
-            
+
             $opArr = array_map('trim', explode(',', $item['operation_type'] ?? ''));
             $opArr = array_filter($opArr, function($op) {
                 return mb_strtolower($op) !== 'передача третьим лицам';

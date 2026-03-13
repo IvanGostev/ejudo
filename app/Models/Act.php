@@ -23,7 +23,7 @@ class Act extends Model
         'processing_result',
     ];
 
-    // Типы актов
+
     public const TYPES = [
         'transfer'      => 'Акт передачи',
         'processing'    => 'Акт обработки',
@@ -38,7 +38,7 @@ class Act extends Model
         return self::TYPES[$this->act_type] ?? 'Акт передачи';
     }
 
-    // Следующий сквозной номер для компании
+
     public static function nextActNumber(int $companyId): int
     {
         $max = static::where('company_id', $companyId)->max('act_number');

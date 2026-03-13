@@ -19,27 +19,27 @@ class ActArchiveController extends Controller
         $query = Act::where('company_id', $company->id)
             ->where('status', 'processed');
 
-        // Фильтр по типу акта
+
         if ($request->filled('act_type')) {
             $query->where('act_type', $request->act_type);
         }
 
-        // Фильтр по периоду (из act_data->date)
+
         if ($request->filled('period_year')) {
             $year = $request->period_year;
             if ($request->filled('period_quarter')) {
-                // Квартал
+
                 $q = (int) $request->period_quarter;
                 $monthFrom = ($q - 1) * 3 + 1;
                 $monthTo   = $monthFrom + 2;
                 $query->whereRaw(
-                    "YEAR(JSON_UNQUOTE(JSON_EXTRACT(act_data, '$.date'))) = ? 
+                    "YEAR(JSON_UNQUOTE(JSON_EXTRACT(act_data, '$.date'))) = ?
                      AND MONTH(JSON_UNQUOTE(JSON_EXTRACT(act_data, '$.date'))) BETWEEN ? AND ?",
                     [$year, $monthFrom, $monthTo]
                 );
             } elseif ($request->filled('period_month')) {
                 $query->whereRaw(
-                    "YEAR(JSON_UNQUOTE(JSON_EXTRACT(act_data, '$.date'))) = ? 
+                    "YEAR(JSON_UNQUOTE(JSON_EXTRACT(act_data, '$.date'))) = ?
                      AND MONTH(JSON_UNQUOTE(JSON_EXTRACT(act_data, '$.date'))) = ?",
                     [$year, $request->period_month]
                 );
@@ -56,7 +56,7 @@ class ActArchiveController extends Controller
             ->orderByDesc('id')
             ->paginate(20)->withQueryString();
 
-        // Доступные годы для фильтра (из уже существующих актов)
+
         $availableYears = Act::where('company_id', $company->id)
             ->where('status', 'processed')
             ->selectRaw("DISTINCT YEAR(JSON_UNQUOTE(JSON_EXTRACT(act_data, '$.date'))) as yr")

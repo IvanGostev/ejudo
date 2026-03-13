@@ -13,10 +13,10 @@ class PolygonsTable
     {
         return $table
             ->columns([
-                //
+
             ])
             ->filters([
-                //
+
             ])
             ->recordActions([
                 EditAction::make(),

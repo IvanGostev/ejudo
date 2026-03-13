@@ -19,8 +19,8 @@ return new class extends Migration
         Schema::table('judo_journals', function (Blueprint $table) {
             $table->foreignId('polygon_id')->nullable()->constrained('polygons')->onDelete('set null');
             $table->index('polygon_id');
-            
-            // Индексы для оптимизации запросов
+
+
             $table->index(['company_id', 'created_at']);
             $table->index(['company_id', 'polygon_id', 'created_at']);
         });
