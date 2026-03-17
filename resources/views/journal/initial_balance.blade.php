@@ -133,24 +133,31 @@
                                 results.innerHTML = '';
                                 if (data.length > 0) {
                                     data.forEach(item => {
+                                        let fCode = item.code;
+                                        let cleanCode = (fCode || '').replace(/\s+/g, '');
+                                        if (cleanCode.length === 11) {
+                                            fCode = cleanCode.substring(0,1) + ' ' + cleanCode.substring(1,3) + ' ' + 
+                                                    cleanCode.substring(3,6) + ' ' + cleanCode.substring(6,8) + ' ' + 
+                                                    cleanCode.substring(8,10) + ' ' + cleanCode.substring(10,11);
+                                        }
                                         const a = document.createElement('a');
                                         a.href = '#';
                                         a.className = 'list-group-item list-group-item-action py-2';
                                         a.innerHTML = `
                                                             <div class="d-flex justify-content-between">
                                                                 <span class="fw-medium text-wrap" style="font-size:0.9em;">${item.name}</span>
-                                                                <span class="badge bg-secondary ms-2 align-self-start">${item.code}</span>
+                                                                <span class="badge bg-secondary ms-2 align-self-start">${fCode}</span>
                                                             </div>
                                                         `;
                                         a.onclick = (e) => {
                                             e.preventDefault();
 
                                             hiddenName.value = item.name;
-                                            hiddenFkko.value = item.code;
+                                            hiddenFkko.value = fCode;
                                             hiddenHazard.value = item.hazard_class;
 
                                             dispName.textContent = item.name;
-                                            dispFkko.textContent = item.code;
+                                            dispFkko.textContent = fCode;
                                             dispHazard.textContent = item.hazard_class;
                                             infoBlock.style.display = 'block';
 

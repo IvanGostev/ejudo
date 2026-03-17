@@ -338,11 +338,18 @@
                                                 html = '<p class="text-center mt-2">Ничего не найдено</p>';
                                             } else {
                                                 data.forEach(item => {
+                                                    let fCode = item.code;
+                                                    let cleanCode = (fCode || '').replace(/\s+/g, '');
+                                                    if (cleanCode.length === 11) {
+                                                        fCode = cleanCode.substring(0,1) + ' ' + cleanCode.substring(1,3) + ' ' + 
+                                                                cleanCode.substring(3,6) + ' ' + cleanCode.substring(6,8) + ' ' + 
+                                                                cleanCode.substring(8,10) + ' ' + cleanCode.substring(10,11);
+                                                    }
                                                     html += `
                                                                                                 <div class="mb-2 border-bottom pb-1" title="${item.name}"
                                                                                                      style="cursor: pointer;"
                                                                                                      onclick="window.location.href='{{ route('acts.manual.create') }}?fkko_code=${item.code}'">
-                                                                                                    <div class="fw-bold text-dark">${item.code}</div>
+                                                                                                    <div class="fw-bold text-dark">${fCode}</div>
                                                                                                     <div class="text-truncate">${item.name}</div>
                                                                                                 </div>
                                                                                             `;

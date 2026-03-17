@@ -128,7 +128,15 @@
                                          </tr>
                                      </table>
                                  </div>
-                                 <div class="mt-3">{{ date('d') }} {{ \Carbon\Carbon::now()->translatedFormat('F') }} {{ date('Y') }} г.</div>
+                                 @php
+                                     $monthsGenitive = [
+                                         1 => 'января', 2 => 'февраля', 3 => 'марта', 4 => 'апреля',
+                                         5 => 'мая', 6 => 'июня', 7 => 'июля', 8 => 'августа',
+                                         9 => 'сентября', 10 => 'октября', 11 => 'ноября', 12 => 'декабря'
+                                     ];
+                                     $currentMonthRus = $monthsGenitive[(int)date('n')];
+                                 @endphp
+                                 <div class="mt-3">&laquo; {{ date('d') }} &raquo; {{ $currentMonthRus }} {{ date('Y') }} г.</div>
                             </div>
                         </div>
 
@@ -228,53 +236,60 @@
                                         <th rowspan="2">Наименование вида отхода</th>
                                         <th rowspan="2">Код по ФККО</th>
                                         <th rowspan="2">Класс опасности</th>
-                                        <th rowspan="2" style="min-width: 60px;">На начало, тонн</th>
+                                        <th colspan="2">На начало, тонн</th>
                                         <th rowspan="2" style="min-width: 60px;">Образовано, тонн</th>
                                         <th rowspan="2" style="min-width: 60px;">Получено, тонн</th>
                                         <th rowspan="2" style="min-width: 60px;">Обработано, тонн</th>
                                         <th rowspan="2" style="min-width: 60px;">Утилизировано, тонн</th>
                                         <th rowspan="2" style="min-width: 60px;">Обезврежено, тонн</th>
                                         <th rowspan="2" style="min-width: 60px;">Передано (всего), тонн</th>
-                                        <th colspan="5">В том числе передано для:</th>
-                                        <th rowspan="2" style="min-width: 60px;">Размещено (хранение), тонн</th>
-                                        <th rowspan="2" style="min-width: 60px;">На конец, тонн</th>
+                                        <th colspan="3">Размещено отходов, тонн</th>
+                                        <th colspan="2">На конец, тонн</th>
                                     </tr>
                                     <tr>
-                                        <th>обраб.</th>
-                                        <th>утил.</th>
-                                        <th>обезвреж.</th>
-                                        <th>хран.</th>
-                                        <th>захорон.</th>
+                                        <th>Хранение</th>
+                                        <th>Накопление</th>
+                                        <th>Всего</th>
+                                        <th>Хранение</th>
+                                        <th>Захоронение</th>
+                                        <th>Хранение</th>
+                                        <th>Накопление</th>
                                     </tr>
                                     <tr class="text-muted" style="font-size: 0.65rem;">
-                                        <th>А</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th>
+                                        <th>А</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @php $row = 1; @endphp
                                     @forelse($journal->table2_data as $item)
+                                        @php
+                                            $start_storage = $item['start_storage'] ?? 0;
+                                            $start_accumulation = $item['start_accumulation'] ?? $item['balance_begin'] ?? 0;
+                                            $placed_total = ($item['stored'] ?? 0) + ($item['buried'] ?? 0);
+                                            $end_storage = $item['end_storage'] ?? 0;
+                                            $end_accumulation = $item['end_accumulation'] ?? $item['balance_end'] ?? 0;
+                                        @endphp
                                         <tr>
                                             <td>{{ $row++ }}</td>
                                             <td class="text-start" style="max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $item['name'] }}">{{ $item['name'] }}</td>
                                             <td>{{ $item['fkko'] }}</td>
                                             <td>{{ $item['hazard'] }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['balance_begin'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['generated'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['received'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['processed'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['utilized'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['neutralized'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['transferred_total'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['trans_process'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['trans_util'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['trans_neutr'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['trans_store'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['trans_bury'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td>{{ rtrim(rtrim(number_format($item['stored'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
-                                            <td class="fw-bold">{{ rtrim(rtrim(number_format($item['balance_end'] ?? 0, 3), '0'), '.') ?: '-' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($start_storage, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($start_accumulation, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['generated'] ?? 0, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['received'] ?? 0, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['processed'] ?? 0, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['utilized'] ?? 0, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['neutralized'] ?? 0, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['transferred_total'] ?? 0, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($placed_total, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['stored'] ?? 0, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($item['buried'] ?? 0, 3), '0'), '.') ?: '0' }}</td>
+                                            <td>{{ rtrim(rtrim(number_format($end_storage, 3), '0'), '.') ?: '0' }}</td>
+                                            <td class="fw-bold">{{ rtrim(rtrim(number_format($end_accumulation, 3), '0'), '.') ?: '0' }}</td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="18">Нет данных</td></tr>
+                                        <tr><td colspan="17">Нет данных</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

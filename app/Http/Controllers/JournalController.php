@@ -203,99 +203,91 @@ class JournalController extends Controller
             $isWasteRecipient = (str_contains($receiver, $compName));
             $isInternal = ($isWasteRecipient && $isWasteGenerator);
 
+            $actType = $act->act_type ?? 'transfer';
+
             foreach ($items as $item) {
                 $name = $item['name'] ?? 'Unknown';
                 $qty = (float) ($item['quantity'] ?? 0);
 
-                $opItemOriginal = $item['operation_type'] ?? '';
-                $opArr = array_map('trim', explode(',', $opItemOriginal));
-                $opArr = array_filter($opArr, function($op) {
-                    return mb_strtolower($op) !== 'транспортирование';
-                });
-
-                if (empty($opArr)) {
-                    continue;
-                }
-
-                $opDisplay = implode(', ', $opArr);
-                $opItem = mb_strtolower($opDisplay);
-
                 $fkko = $this->formatFkko($item['fkko_code'] ?? '');
                 $hazard = $item['hazard_class'] ?? '';
+
+                $opItemOriginal = $item['operation_type'] ?? '';
+                $opArr = array_filter(array_map('trim', explode(',', $opItemOriginal)), function($op) {
+                    return mb_strtolower($op) !== 'транспортирование';
+                });
+                $opItem = mb_strtolower(implode(', ', $opArr));
+
+                if (empty($opArr) && empty($actType)) {
+                    continue;
+                }
 
                 if (!isset($wasteStats[$name])) {
                     $wasteStats[$name] = $this->emptyStats($fkko, $hazard);
                 }
 
 
-                if ($isInternal || (str_contains($opItem, 'образован'))) {
-                    if (str_contains($opItem, 'образован')) $wasteStats[$name]['generated'] += $qty;
-                    if (str_contains($opItem, 'обработ')) $wasteStats[$name]['processed'] += $qty;
-                    if (str_contains($opItem, 'утилиз')) $wasteStats[$name]['utilized'] += $qty;
-                    if (str_contains($opItem, 'обезвреж')) $wasteStats[$name]['neutralized'] += $qty;
-                    if (str_contains($opItem, 'хран')) $wasteStats[$name]['stored'] += $qty;
-                    if (str_contains($opItem, 'захорон')) $wasteStats[$name]['buried'] += $qty;
+                if (str_contains($opItem, 'образован')) {
+                    $wasteStats[$name]['generated'] += $qty;
                 }
 
-                elseif ($isWasteGenerator) {
+                if ($isWasteRecipient && !$isInternal) {
+                    $wasteStats[$name]['received'] += $qty;
+                }
+
+                if ($isWasteGenerator && !$isInternal && $actType === 'transfer') {
                     $wasteStats[$name]['transferred_total'] += $qty;
-                    if (str_contains($opItem, 'обработ')) {
-                        $wasteStats[$name]['trans_process'] += $qty;
-                    } elseif (str_contains($opItem, 'утилиз')) {
-                        $wasteStats[$name]['trans_util'] += $qty;
-                    } elseif (str_contains($opItem, 'обезвреж')) {
+                }
 
-                        $wasteStats[$name]['trans_neutr']   += $qty;
-                        $wasteStats[$name]['neutralized']   += $qty;
-                    } elseif (str_contains($opItem, 'хран')) {
-                        $wasteStats[$name]['trans_store'] += $qty;
-                    } elseif (str_contains($opItem, 'захорон')) {
-                        $wasteStats[$name]['trans_bury'] += $qty;
-                    }
+                if ($actType === 'processing') {
+                    $wasteStats[$name]['processed'] += $qty;
+                } elseif ($actType === 'utilization') {
+                    $wasteStats[$name]['utilized'] += $qty;
+                } elseif ($actType === 'neutralization') {
+                    $wasteStats[$name]['neutralized'] += $qty;
+                } elseif ($actType === 'storage') {
+                    $wasteStats[$name]['stored'] += $qty;
+                } elseif ($actType === 'burial') {
+                    $wasteStats[$name]['buried'] += $qty;
+                }
 
+                if ($isWasteGenerator && !$isInternal && $actType === 'transfer') {
                     $table3_data[] = [
-                        'date' => $data['date'] ?? '',
-                        'number' => $act->act_number,
-                        'counterparty' => $data['receiver'] ?? '',
-                        'waste' => $name,
-                        'fkko' => $fkko,
-                        'hazard' => $hazard,
-                        'amount' => $qty,
-                        'operation' => $opItem,
-                        'amt_process' => 0,
-                        'amt_util'    => 0,
-                        'amt_neutr'   => 0,
-                        'amt_store'   => 0,
-                        'amt_bury'    => 0,
+                        'date'              => $data['date'] ?? '',
+                        'number'            => $act->act_number,
+                        'counterparty'      => $data['receiver'] ?? '',
+                        'waste'             => $name,
+                        'fkko'              => $fkko,
+                        'hazard'            => $hazard,
+                        'amount'            => $qty,
+                        'operation'         => $opItem,
+                        'amt_process'       => 0,
+                        'amt_util'          => 0,
+                        'amt_neutr'         => 0,
+                        'amt_store'         => 0,
+                        'amt_bury'          => 0,
                         'contract_details'  => $data['contract_details'] ?? '',
                         'contract_validity' => '',
                         'license'           => $company->license_details ?? '',
                     ];
                 }
 
-                elseif ($isWasteRecipient) {
-                    $wasteStats[$name]['received'] += $qty;
-                    if (str_contains($opItem, 'обработ')) $wasteStats[$name]['processed'] += $qty;
-                    elseif (str_contains($opItem, 'утилиз')) $wasteStats[$name]['utilized'] += $qty;
-                    elseif (str_contains($opItem, 'обезвреж')) $wasteStats[$name]['neutralized'] += $qty;
-                    elseif (str_contains($opItem, 'хран')) $wasteStats[$name]['stored'] += $qty;
-                    elseif (str_contains($opItem, 'захорон')) $wasteStats[$name]['buried'] += $qty;
-
+                if ($isWasteRecipient && !$isInternal) {
                     $table4_data[] = [
-                        'date' => $data['date'] ?? '',
-                        'number' => $act->act_number,
-                        'counterparty' => $data['provider'] ?? '',
-                        'waste' => $name,
-                        'fkko' => $fkko,
-                        'hazard' => $hazard,
-                        'amount' => $qty,
-                        'operation' => $opItem,
-                        'amt_third_party' => str_contains($opItem, 'третьим лицам') ? $qty : 0,
-                        'amt_process' => str_contains($opItem, 'обработ') ? $qty : 0,
-                        'amt_util'    => str_contains($opItem, 'утилиз') ? $qty : 0,
-                        'amt_neutr'   => str_contains($opItem, 'обезвреж') ? $qty : 0,
-                        'amt_store'   => str_contains($opItem, 'хран') ? $qty : 0,
-                        'amt_bury'    => str_contains($opItem, 'захорон') ? $qty : 0,
+                        'date'              => $data['date'] ?? '',
+                        'number'            => $act->act_number,
+                        'counterparty'      => $data['provider'] ?? '',
+                        'waste'             => $name,
+                        'fkko'              => $fkko,
+                        'hazard'            => $hazard,
+                        'amount'            => $qty,
+                        'operation'         => $opItem,
+                        'amt_third_party'   => str_contains($opItem, 'третьим лицам') ? $qty : 0,
+                        'amt_process'       => str_contains($opItem, 'обработ') ? $qty : 0,
+                        'amt_util'          => str_contains($opItem, 'утилиз') ? $qty : 0,
+                        'amt_neutr'         => str_contains($opItem, 'обезвреж') ? $qty : 0,
+                        'amt_store'         => str_contains($opItem, 'хран') ? $qty : 0,
+                        'amt_bury'          => str_contains($opItem, 'захорон') ? $qty : 0,
                         'contract_details'  => $data['contract_details'] ?? '',
                         'contract_validity' => '',
                         'license'           => $company->license_details ?? '',
@@ -440,7 +432,7 @@ class JournalController extends Controller
 
         $data = $this->prepareSpreadsheet($id);
         $writer = IOFactory::createWriter($data['spreadsheet'], 'Xls');
-        return response()->streamDownload(fn() => $writer->save('php://output'), $data['filename']);
+        return response()->streamDownload(fn() => $writer->save('php:
     }
 
     private function prepareSpreadsheet(string $id) {
@@ -467,54 +459,89 @@ class JournalController extends Controller
 
 
         $sheet0 = $spreadsheet->getSheet(0);
-        // Резервные поля удалены по просьбе пользователя, так как они отображались некорректно слева
+
+        $monthsGenitive = [
+            1 => 'января', 2 => 'февраля', 3 => 'марта', 4 => 'апреля',
+            5 => 'мая', 6 => 'июня', 7 => 'июля', 8 => 'августа',
+            9 => 'сентября', 10 => 'октября', 11 => 'ноября', 12 => 'декабря'
+        ];
+        $currentMonthRus = $monthsGenitive[(int)date('n')];
+        $currentDateLine = '" ' . date('d') . ' " ' . $currentMonthRus . ' ' . date('Y') . ' г.';
+
+        $sheet0->setCellValue('F3', 'Генеральный директор ' . ($company->name ?? ''));
+        $sheet0->setCellValue('M5', $company->contact_person ?? '');
+        $sheet0->setCellValue('M8', $currentDateLine);
+        
+        $sheet0->setCellValue('D13', $company->name ?? '');
+        $sheet0->setCellValue('C21', $company->name ?? '');
+
+        $sheet0->setCellValue('D27', \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel($startDate));
+        $sheet0->getStyle('D27')->getNumberFormat()->setFormatCode('dd.mm.yyyy');
+        
+        $sheet0->setCellValue('D29', \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel($endDate));
+        $sheet0->getStyle('D29')->getNumberFormat()->setFormatCode('dd.mm.yyyy');
 
 
-
-        $populate = function($sheetIdx, $data, $columns, $startRow = 11) use ($spreadsheet) {
+        $populate = function($sheetIdx, $data, $columns, $startRow, $numCol = 'B', $dataStart = 3) use ($spreadsheet) {
             $sheet = $spreadsheet->getSheet($sheetIdx);
             $r = $startRow;
             foreach ($data as $idx => $item) {
-                $numCell = $sheet->getCell('A'.$r);
-                $numCell->setValue($idx + 1);
-                $sheet->getStyle('A'.$r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-                $colIndex = 1;
+                $sheet->setCellValue($numCol . $r, $idx + 1);
+                $sheet->getStyle($numCol . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle($numCol . $r)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                $sheet->getStyle($numCol . $r)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_NONE);
+
+                $colIndex = $dataStart;
                 foreach ($columns as $key) {
-                    $val = $item[$key] ?? '-';
-                    $colLetter = Coordinate::stringFromColumnIndex($colIndex + 1);
-                    $cell = $sheet->getCell($colLetter . $r);
-                    $cell->setValue($val === 0 ? '-' : $val);
-
-
+                    $val = $item[$key] ?? 0;
+                    $colLetter = Coordinate::stringFromColumnIndex($colIndex);
+                    $sheet->setCellValue($colLetter . $r, $val);
                     $sheet->getStyle($colLetter . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    $sheet->getStyle($colLetter . $r)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+                    $sheet->getStyle($colLetter . $r)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                    $sheet->getStyle($colLetter . $r)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_NONE);
                     $colIndex++;
                 }
+
+                if ($sheetIdx === 1) {
+                    for ($extra = $colIndex; $extra <= 8; $extra++) {
+                        $colLetter = Coordinate::stringFromColumnIndex($extra);
+                        $sheet->setCellValue($colLetter . $r, '-');
+                        $sheet->getStyle($colLetter . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                        $sheet->getStyle($colLetter . $r)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                        $sheet->getStyle($colLetter . $r)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_NONE);
+                    }
+                }
+
+                $sheet->getRowDimension($r)->setRowHeight(-1);
                 $r++;
             }
         };
 
+        $populate(1, $journal->table1_data, ['name', 'fkko', 'hazard'], 7, 'B', 3);
 
-        $populate(1, $journal->table1_data, ['name', 'fkko', 'hazard'], 11);
-
-
-
-        $populate(2, $journal->table2_data, [
-            'name', 'fkko', 'hazard', 'balance_begin', 'generated', 'received',
+        $table2_excel_data = collect($journal->table2_data)->map(function ($item) {
+            $item['start_storage'] = $item['start_storage'] ?? 0;
+            $item['start_accumulation'] = $item['start_accumulation'] ?? $item['balance_begin'] ?? 0;
+            $item['placed_total'] = ($item['stored'] ?? 0) + ($item['buried'] ?? 0);
+            $item['end_storage'] = $item['end_storage'] ?? 0;
+            $item['end_accumulation'] = $item['end_accumulation'] ?? $item['balance_end'] ?? 0;
+            return $item;
+        })->toArray();
+        $populate(2, $table2_excel_data, [
+            'name', 'fkko', 'hazard', 'start_storage', 'start_accumulation', 'generated', 'received',
             'processed', 'utilized', 'neutralized', 'transferred_total',
-            'trans_process', 'trans_util', 'trans_neutr', 'trans_store', 'trans_bury',
-            'stored', 'balance_end'
-        ], 13);
-
+            'placed_total', 'stored', 'buried', 'end_storage', 'end_accumulation'
+        ], 9, 'B', 3);
 
         $populate(3, $journal->table3_data, [
             'waste', 'fkko', 'hazard', 'amount', 'amt_process', 'amt_util', 'amt_neutr', 'amt_store', 'amt_bury', 'counterparty', 'contract_details', 'contract_validity', 'license'
-        ], 11);
-
+        ], 8, 'A', 2);
 
         $populate(4, $journal->table4_data, [
             'waste', 'fkko', 'hazard', 'amount', 'amt_third_party', 'amt_process', 'amt_util', 'amt_neutr', 'amt_store', 'amt_bury', 'counterparty', 'contract_details', 'contract_validity', 'license'
-        ], 11);
+        ], 10, 'B', 3);
 
         $filename = "ЖУДО_" . str_replace(' ', '_', $company->name) . "_" . $periodDate->format('Y-m') . ".xls";
         return ['spreadsheet' => $spreadsheet, 'filename' => $filename];

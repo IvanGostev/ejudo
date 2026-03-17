@@ -241,6 +241,7 @@
         let wasteItems = [];
         let currentWasteData = null;
         let wasteItemCounter = 0;
+        let userModifiedOp8 = false;
 
         function swapCompanies() {
             const providerInput = document.getElementById('provider');
@@ -343,8 +344,8 @@
             document.getElementById('temp-amount').value = '';
             document.querySelectorAll('[id^="temp-op"]').forEach(cb => {
                 cb.checked = false;
-                if (cb.id === 'temp-op8') cb.disabled = true;
             });
+            userModifiedOp8 = false;
             currentWasteData = null;
             document.getElementById('selected-waste-display').classList.add('d-none');
             document.getElementById('waste-search-section').style.display = 'none';
@@ -357,10 +358,14 @@
             const otherOps = document.querySelectorAll('[id^="temp-op"]:not(#temp-op8)');
 
             if (op8) {
-                op8.disabled = true;
+                op8.addEventListener('change', () => {
+                    userModifiedOp8 = true;
+                });
                 const updateOp8 = () => {
-                    let anyChecked = Array.from(otherOps).some(c => c.checked);
-                    op8.checked = anyChecked;
+                    if (!userModifiedOp8) {
+                        let anyChecked = Array.from(otherOps).some(c => c.checked);
+                        op8.checked = anyChecked;
+                    }
                 };
                 otherOps.forEach(cb => cb.addEventListener('change', updateOp8));
             }
@@ -397,19 +402,26 @@
                             results.innerHTML = '';
                             if (data.length > 0) {
                                 data.forEach(item => {
+                                    let fCode = item.code;
+                                    let cleanCode = (fCode || '').replace(/\s+/g, '');
+                                    if (cleanCode.length === 11) {
+                                        fCode = cleanCode.substring(0,1) + ' ' + cleanCode.substring(1,3) + ' ' + 
+                                                cleanCode.substring(3,6) + ' ' + cleanCode.substring(6,8) + ' ' + 
+                                                cleanCode.substring(8,10) + ' ' + cleanCode.substring(10,11);
+                                    }
                                     const a = document.createElement('a');
                                     a.href = '#';
                                     a.className = 'list-group-item list-group-item-action py-2';
                                     a.innerHTML = `
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div class="small fw-bold text-wrap" style="max-width: 78%;">${item.name}</div>
-                                            <span class="badge bg-primary ms-2 text-nowrap">${item.code}</span>
+                                            <span class="badge bg-primary ms-2 text-nowrap">${fCode}</span>
                                         </div>`;
                                     a.onclick = (e) => {
                                         e.preventDefault();
-                                        currentWasteData = { name: item.name, code: item.code, hazard_class: item.hazard_class };
+                                        currentWasteData = { name: item.name, code: fCode, hazard_class: item.hazard_class };
                                         dName.textContent   = item.name;
-                                        dFkko.textContent   = item.code;
+                                        dFkko.textContent   = fCode;
                                         dHazard.textContent = item.hazard_class;
                                         display.classList.remove('d-none');
                                         input.value = item.name;
