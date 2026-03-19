@@ -165,7 +165,7 @@
                         <!-- Dates (Excel style) -->
                         <div class="mt-5 pt-5">
                             <div class="d-flex align-items-center mb-4">
-                                <div class="me-3" style="width: 80px;">начато</div>
+                                <div class="me-3" style="width: 80px;">начат</div>
                                 <div class="border-bottom border-dark flex-grow-1 text-center fw-bold">{{ $startDate->format('d.m.Y') }}</div>
                             </div>
                             <div class="d-flex align-items-center mb-4">
@@ -210,9 +210,9 @@
                                             <td class="text-start">{{ $item['name'] }}</td>
                                             <td>{{ $item['fkko'] }}</td>
                                             <td>{{ $item['hazard'] }}</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
+                                            <td class="text-start">{{ $item['origin'] ?? '-' }}</td>
+                                            <td class="text-start">{{ $item['aggregate_state'] ?? '-' }}</td>
+                                            <td class="text-start">{{ $item['chemical_composition'] ?? '-' }}</td>
                                         </tr>
                                     @empty
                                         <tr><td colspan="7">Нет данных</td></tr>

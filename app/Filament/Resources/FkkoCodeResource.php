@@ -45,6 +45,17 @@ class FkkoCodeResource extends Resource
                         ->label('Единица измерения'),
                     Forms\Components\TextInput::make('category')
                         ->label('Категория'),
+                    Forms\Components\Textarea::make('origin')
+                        ->label('Происхождение или условия образования')
+                        ->columnSpanFull()
+                        ->rows(3),
+                    Forms\Components\TextInput::make('aggregate_state')
+                        ->label('Агрегатное состояние и физическая форма')
+                        ->columnSpanFull(),
+                    Forms\Components\Textarea::make('chemical_composition')
+                        ->label('Химический и (или) компонентный состав, %')
+                        ->columnSpanFull()
+                        ->rows(3),
                     Forms\Components\Toggle::make('is_active')
                         ->label('Активен')
                         ->default(true),
@@ -66,6 +77,15 @@ class FkkoCodeResource extends Resource
                     Tables\Columns\TextColumn::make('hazard_class')
                         ->label('Класс')
                         ->sortable(),
+                    Tables\Columns\TextColumn::make('origin')
+                        ->label('Происхождение')
+                        ->limit(40),
+                    Tables\Columns\TextColumn::make('aggregate_state')
+                        ->label('Агрег. состояние')
+                        ->limit(30),
+                    Tables\Columns\TextColumn::make('chemical_composition')
+                        ->label('Химический состав')
+                        ->limit(30),
                     Tables\Columns\IconColumn::make('is_active')
                         ->label('Активен')
                         ->boolean(),

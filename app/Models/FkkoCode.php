@@ -13,6 +13,9 @@ class FkkoCode extends Model
         'unit',
         'category',
         'is_active',
+        'origin',
+        'aggregate_state',
+        'chemical_composition',
     ];
 
     protected $casts = [

@@ -296,6 +296,11 @@ class JournalController extends Controller
             }
         }
 
+        // Загружаем справочник ФККО для обогащения Таблицы 1 (столбцы 5, 6, 7)
+        $fkkoCatalog = \App\Models\FkkoCode::whereNotNull('code')
+            ->get(['code', 'origin', 'aggregate_state', 'chemical_composition'])
+            ->keyBy(fn($f) => preg_replace('/\s+/', '', $f->code)); // индексируем без пробелов для надёжного поиска
+
         $table2 = [];
         $uniqueWastes = array_unique(array_merge(array_keys($prevBalances), array_keys($wasteStats)));
         foreach ($uniqueWastes as $wasteName) {
@@ -337,7 +342,18 @@ class JournalController extends Controller
                 'polygon_id' => $polygonId,
             ],
             [
-                'table1_data' => array_values(collect($table2)->map(fn($x) => ['name' => $x['name'], 'fkko' => $x['fkko'], 'hazard' => $x['hazard']])->toArray()),
+                'table1_data' => array_values(collect($table2)->map(function ($x) use ($fkkoCatalog) {
+                    $codeKey = preg_replace('/\s+/', '', $x['fkko'] ?? '');
+                    $fkkoRef = $fkkoCatalog->get($codeKey);
+                    return [
+                        'name'                 => $x['name'],
+                        'fkko'                 => $x['fkko'],
+                        'hazard'               => $x['hazard'],
+                        'origin'               => $fkkoRef?->origin ?? '-',
+                        'aggregate_state'      => $fkkoRef?->aggregate_state ?? '-',
+                        'chemical_composition' => $fkkoRef?->chemical_composition ?? '-',
+                    ];
+                })->toArray()),
                 'table2_data' => $table2,
                 'table3_data' => $table3_data,
                 'table4_data' => $table4_data,
@@ -432,7 +448,7 @@ class JournalController extends Controller
 
         $data = $this->prepareSpreadsheet($id);
         $writer = IOFactory::createWriter($data['spreadsheet'], 'Xls');
-        return response()->streamDownload(fn() => $writer->save('php:
+        return response()->streamDownload(fn() => $writer->save('php://output'), $data['filename']);
     }
 
     private function prepareSpreadsheet(string $id) {
@@ -505,10 +521,11 @@ class JournalController extends Controller
                 }
 
                 if ($sheetIdx === 1) {
+                    // Столбцы 5-7 (Происхождение, Агр. состояние, Хим. состав) уже заполнены через columns.
+                    // Если остались ячейки за пределами шаблона - заполняем прочерками.
                     for ($extra = $colIndex; $extra <= 8; $extra++) {
                         $colLetter = Coordinate::stringFromColumnIndex($extra);
-                        $sheet->setCellValue($colLetter . $r, '-');
-                        $sheet->getStyle($colLetter . $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                        $sheet->setCellValue($colLetter . $r, '');
                         $sheet->getStyle($colLetter . $r)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
                         $sheet->getStyle($colLetter . $r)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_NONE);
                     }
@@ -519,7 +536,7 @@ class JournalController extends Controller
             }
         };
 
-        $populate(1, $journal->table1_data, ['name', 'fkko', 'hazard'], 7, 'B', 3);
+        $populate(1, $journal->table1_data, ['name', 'fkko', 'hazard', 'origin', 'aggregate_state', 'chemical_composition'], 7, 'B', 3);
 
         $table2_excel_data = collect($journal->table2_data)->map(function ($item) {
             $item['start_storage'] = $item['start_storage'] ?? 0;
