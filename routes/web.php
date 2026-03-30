@@ -59,6 +59,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/acts-archive', [\App\Http\Controllers\ActArchiveController::class, 'index'])->name('acts.archive');
         Route::put('/acts-archive/{act}', [\App\Http\Controllers\ActArchiveController::class, 'update'])->name('acts.archive.update');
 
+        // Справочник контрагентов
+        Route::get('/counterparties', [\App\Http\Controllers\CounterpartyController::class, 'index'])->name('counterparties.index');
+        Route::get('/counterparties/search', [\App\Http\Controllers\CounterpartyController::class, 'search'])->name('counterparties.search');
+        Route::post('/counterparties', [\App\Http\Controllers\CounterpartyController::class, 'store'])->name('counterparties.store');
+        Route::delete('/counterparties/{id}', [\App\Http\Controllers\CounterpartyController::class, 'destroy'])->name('counterparties.destroy');
+
     });
 
     Route::get('/company/create', [AuthController::class, 'showCompanyCreate'])->name('company.create');

@@ -31,10 +31,7 @@
         <div class="row justify-content-center">
             <div class="col-md-9">
 
-                {{-- Выбор типа акта --}}
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0 fw-bold">Ручное добавление акта</h5>
+        <h5 class="mb-0 fw-bold">Ручное добавление акта</h5>
                     </div>
                     <div class="card-body p-4">
                         <label class="form-label text-muted small text-uppercase fw-bold mb-3">Тип акта</label>
@@ -75,16 +72,6 @@
                             @csrf
                             <input type="hidden" name="act_type" value="{{ $actType }}">
 
-                            {{-- Ваша организация --}}
-                            <div class="mb-4">
-                                <label class="form-label text-muted small text-uppercase fw-bold">Ваша организация</label>
-                                <input type="text" class="form-control bg-light"
-                                    value="{{ $currentCompany->name ?? 'Не выбрана' }}" readonly>
-                                @if(!$currentCompany)
-                                    <div class="form-text text-danger">Пожалуйста, выберите компанию.</div>
-                                @endif
-                            </div>
-
                             <div class="row">
                                 <div class="col-md-12 mb-3">
                                     <label class="form-label text-muted small text-uppercase fw-bold">Номер акта (назначается системой)</label>
@@ -111,37 +98,94 @@
                                 </div>
                             </div>
 
-                            <div class="row align-items-end">
+                            <input type="hidden" id="current-company-info" value="{{ json_encode([
+                                'name' => $currentCompany->name,
+                                'inn' => $currentCompany->inn,
+                                'kpp' => $currentCompany->kpp,
+                                'legal_address' => $currentCompany->legal_address,
+                                'license_number' => $currentCompany->license_details,
+                                'license_valid_until' => $currentCompany->license_valid_until?->format('Y-m-d')
+                            ]) }}">
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Срок действия договора</label>
+                                    <input type="text" name="contract_validity" class="form-control"
+                                        value="{{ old('contract_validity') }}"
+                                        placeholder="Например: до 31.12.2026 или бессрочный">
+                                    <div class="form-text">Заполняется для столбцов [13] Таблицы 3 и [14] Таблицы 4</div>
+                                </div>
+                            </div>
+
+                            <div class="row align-items-start">
+                                {{-- ПОСТАВЩИК --}}
                                 <div class="col-md-5 mb-3">
-                                    <label class="form-label">Поставщик</label>
-                                    <div class="input-group">
-                                        <input type="text" name="provider" id="provider" class="form-control"
-                                            value="{{ old('provider', '') }}"
-                                            placeholder="Кто передал отход" required>
-                                        <button class="btn btn-outline-secondary" type="button" onclick="findCompanyByInn('provider')" title="Найти по ИНН">
-                                            <i class="bi bi-search"></i> ИНН
-                                        </button>
+                                    <label class="form-label fw-medium">Поставщик <span class="text-danger">*</span></label>
+                                    <div class="counterparty-widget" id="provider-widget">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control cp-search" id="provider-search"
+                                                placeholder="Введите название или ИНН..." autocomplete="off">
+                                            <button class="btn btn-outline-secondary cp-add-btn" type="button"
+                                                data-target="provider" title="Добавить в справочник">
+                                                <i class="bi bi-person-plus"></i>
+                                            </button>
+                                        </div>
+                                        <div class="list-group position-absolute shadow cp-results" id="provider-results"
+                                            style="display:none; z-index:1050; width:100%; max-height:220px; overflow-y:auto;"></div>
+                                        <input type="hidden" name="provider" id="provider-value" required>
+                                        <input type="hidden" name="provider_snapshot" id="provider-snapshot">
+                                        <div class="cp-details card mt-2 border-0 bg-light p-2" id="provider-details" style="display:none; font-size:0.85rem;">
+                                            <div class="row g-1">
+                                                <div class="col-6"><span class="text-muted">ИНН:</span> <span class="fw-medium cp-inn"></span></div>
+                                                <div class="col-6"><span class="text-muted">КПП:</span> <span class="fw-medium cp-kpp"></span></div>
+                                                <div class="col-12"><span class="text-muted">Адрес:</span> <span class="cp-addr"></span></div>
+                                                <div class="col-8"><span class="text-muted">Лицензия:</span> <span class="cp-lic"></span></div>
+                                                <div class="col-4"><span class="text-muted">до</span> <span class="cp-lic-date"></span></div>
+                                            </div>
+                                        </div>
+                                        <div class="inn-error text-danger small mt-1" style="display:none;"></div>
                                     </div>
                                 </div>
-                                <div class="col-md-2 mb-3 d-flex justify-content-center">
+
+                                {{-- КНОПКА SWAP --}}
+                                <div class="col-md-2 mb-3 d-flex justify-content-center align-items-center" style="padding-top:28px;">
                                     <button type="button" class="btn btn-outline-secondary text-nowrap" onclick="swapCompanies()" title="Поменять местами">
                                         <i class="bi bi-arrow-left-right d-none d-md-inline-block"></i>
                                         <i class="bi bi-arrow-down-up d-inline-block d-md-none"></i>
-                                        <span class="d-inline-block d-md-none ms-2">Поменять</span>
                                     </button>
                                 </div>
+
+                                {{-- ПОЛУЧАТЕЛЬ --}}
                                 <div class="col-md-5 mb-3">
-                                    <label class="form-label">Получатель</label>
-                                    <div class="input-group">
-                                        <input type="text" name="receiver" id="receiver" class="form-control"
-                                            value="{{ old('receiver', ($currentCompany->name ?? '')) }}"
-                                            placeholder="Кто принял отход" required>
-                                        <button class="btn btn-outline-secondary" type="button" onclick="findCompanyByInn('receiver')" title="Найти по ИНН">
-                                            <i class="bi bi-search"></i> ИНН
-                                        </button>
+                                    <label class="form-label fw-medium">Получатель <span class="text-danger">*</span></label>
+                                    <div class="counterparty-widget" id="receiver-widget">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control cp-search" id="receiver-search"
+                                                placeholder="Введите название или ИНН..." autocomplete="off">
+                                            <button class="btn btn-outline-secondary cp-add-btn" type="button"
+                                                data-target="receiver" title="Добавить в справочник">
+                                                <i class="bi bi-person-plus"></i>
+                                            </button>
+                                        </div>
+                                        <div class="list-group position-absolute shadow cp-results" id="receiver-results"
+                                            style="display:none; z-index:1050; width:100%; max-height:220px; overflow-y:auto;"></div>
+                                        <input type="hidden" name="receiver" id="receiver-value" required>
+                                        <input type="hidden" name="receiver_snapshot" id="receiver-snapshot">
+                                        <div class="cp-details card mt-2 border-0 bg-light p-2" id="receiver-details" style="display:none; font-size:0.85rem;">
+                                            <div class="row g-1">
+                                                <div class="col-6"><span class="text-muted">ИНН:</span> <span class="fw-medium cp-inn"></span></div>
+                                                <div class="col-6"><span class="text-muted">КПП:</span> <span class="fw-medium cp-kpp"></span></div>
+                                                <div class="col-12"><span class="text-muted">Адрес:</span> <span class="cp-addr"></span></div>
+                                                <div class="col-8"><span class="text-muted">Лицензия:</span> <span class="cp-lic"></span></div>
+                                                <div class="col-4"><span class="text-muted">до</span> <span class="cp-lic-date"></span></div>
+                                            </div>
+                                        </div>
+                                        <div class="inn-error text-danger small mt-1" style="display:none;"></div>
                                     </div>
                                 </div>
                             </div>
+
+
 
                             <hr class="my-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -150,32 +194,23 @@
                                     <i class="bi bi-plus-circle"></i> Добавить отход
                                 </button>
                             </div>
-
                             <div id="waste-items-container"></div>
 
                             <div id="waste-search-section" class="border rounded p-3 mb-3">
                                 <div class="mb-3 position-relative">
-                                    <label class="form-label">Поиск отхода (Наименование или код ФККО)</label>
-                                    <input type="text" id="waste-search" class="form-control"
-                                        placeholder="Начните вводить название или код (можно без пробелов)..." autocomplete="off">
-
-                                    <div id="waste-results" class="list-group position-absolute w-100 shadow-sm"
-                                        style="display:none; z-index: 1000; max-height: 250px; overflow-y: auto;"></div>
+                                    <label class="form-label">Поиск отхода</label>
+                                    <input type="text" id="waste-search" class="form-control" autocomplete="off">
+                                    <div id="waste-results" class="list-group position-absolute w-100 shadow-sm" style="display:none; z-index:1000; max-height:250px; overflow-y:auto;"></div>
                                 </div>
 
                                 <div id="selected-waste-display" class="alert alert-light border mb-3 d-none">
                                     <div class="row align-items-center">
                                         <div class="col">
-                                            <div class="small text-muted mb-1">Выбранный отход:</div>
                                             <div class="fw-bold" id="display-name"></div>
-                                            <div class="small">
-                                                Код: <span class="fw-bold" id="display-fkko"></span> |
-                                                Класс: <span class="fw-bold" id="display-hazard"></span>
-                                            </div>
+                                            <div class="small">Код: <span id="display-fkko"></span> | Класс: <span id="display-hazard"></span></div>
                                         </div>
                                         <div class="col-auto">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary"
-                                                onclick="clearWasteSelection()">Изменить</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearWasteSelection()">Изменить</button>
                                         </div>
                                     </div>
                                 </div>
@@ -183,14 +218,12 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Количество (тонн)</label>
-                                        <input type="text" id="temp-amount" class="form-control" inputmode="decimal"
-                                            placeholder="0.000">
+                                        <input type="text" id="temp-amount" class="form-control" placeholder="0.000">
                                     </div>
                                     <div class="col-12 mb-3">
                                         <label class="form-label d-block">Вид обращения</label>
                                         <div class="row">
                                             @php
-
                                                 $operations = [
                                                     'temp-op2' => 'Утилизация',
                                                     'temp-op3' => 'Обезвреживание',
@@ -205,8 +238,7 @@
                                             @foreach($operations as $opId => $opLabel)
                                                 <div class="col-md-6 col-12 mb-2">
                                                     <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" id="{{ $opId }}"
-                                                            value="{{ $opLabel }}">
+                                                        <input class="form-check-input" type="checkbox" id="{{ $opId }}" value="{{ $opLabel }}">
                                                         <label class="form-check-label small" for="{{ $opId }}">{{ $opLabel }}</label>
                                                     </div>
                                                 </div>
@@ -214,11 +246,8 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 <div class="text-end">
-                                    <button type="button" class="btn btn-primary" onclick="addSelectedWaste()">
-                                        Добавить в список
-                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="addSelectedWaste()">Добавить в список</button>
                                 </div>
                             </div>
 
@@ -226,256 +255,330 @@
                                 <a href="{{ route('acts.archive') }}" class="btn btn-outline-secondary me-2">Отмена</a>
                                 <button type="submit" class="btn btn-primary px-4">Сохранить акт</button>
                             </div>
-
                         </form>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
 
+    <div class="modal fade" id="addCpModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Добавить контрагента в справочник</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="cp-modal-error" class="alert alert-danger d-none"></div>
+                    <div class="mb-3">
+                        <label class="form-label">Наименование <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="cp-modal-name">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ИНН</label>
+                            <input type="text" class="form-control" id="cp-modal-inn" maxlength="12">
+                            <div class="form-text text-danger" id="cp-modal-inn-err" style="display:none;">Неверный ИНН</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">КПП</label>
+                            <input type="text" class="form-control" id="cp-modal-kpp" maxlength="9">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Юр. адрес</label>
+                        <input type="text" class="form-control" id="cp-modal-addr">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Лицензия</label>
+                            <input type="text" class="form-control" id="cp-modal-lic">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Срок действия</label>
+                            <input type="date" class="form-control" id="cp-modal-lic-date">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-dark" id="cp-modal-save">Сохранить</button>
+                </div>
             </div>
         </div>
     </div>
 @endsection
 
 @push('scripts')
-    <script>
-        let wasteItems = [];
-        let currentWasteData = null;
-        let wasteItemCounter = 0;
-        let userModifiedOp8 = false;
+<script>
+    let wasteItems = [];
+    let currentWasteData = null;
+    let wasteItemCounter = 0;
 
-        function swapCompanies() {
-            const providerInput = document.getElementById('provider');
-            const receiverInput = document.getElementById('receiver');
-            const temp = providerInput.value;
-            providerInput.value = receiverInput.value;
-            receiverInput.value = temp;
+    function validateInn(inn) {
+        inn = inn.toString().replace(/\D/g, '');
+        if (inn.length === 10) {
+            const weights = [2, 4, 10, 3, 5, 9, 4, 6, 8];
+            let sum = 0;
+            for (let i = 0; i < 9; i++) sum += parseInt(inn[i]) * weights[i];
+            return (parseInt(inn[9]) === (sum % 11) % 10);
+        } else if (inn.length === 12) {
+            const w1 = [7, 2, 4, 10, 3, 5, 9, 4, 6, 8];
+            const w2 = [3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8];
+            let s1 = 0;
+            for (let i = 0; i < 10; i++) s1 += parseInt(inn[i]) * w1[i];
+            let s2 = 0;
+            for (let i = 0; i < 11; i++) s2 += parseInt(inn[i]) * w2[i];
+            return (parseInt(inn[10]) === (s1 % 11) % 10) && (parseInt(inn[11]) === (s2 % 11) % 10);
+        }
+        return false;
+    }
+
+    function updateCpDetails(type, data) {
+        const widget = document.getElementById(type + '-widget');
+        const details = widget.querySelector('.cp-details');
+        const searchInput = widget.querySelector('.cp-search');
+        
+        if (!data) {
+            details.style.display = 'none';
+            return;
         }
 
-        function clearWasteSelection() {
-            document.getElementById('waste-search').value = '';
-            currentWasteData = null;
-            document.getElementById('selected-waste-display').classList.add('d-none');
-            document.getElementById('waste-search').focus();
+        searchInput.value = data.name;
+        document.getElementById(type + '-value').value = data.name;
+        
+        details.querySelector('.cp-inn').textContent = data.inn || '—';
+        details.querySelector('.cp-kpp').textContent = data.kpp || '—';
+        details.querySelector('.cp-addr').textContent = data.legal_address || '—';
+        details.querySelector('.cp-lic').textContent = data.license_number || '—';
+        
+        let dateStr = '—';
+        if (data.license_valid_until) {
+            const d = new Date(data.license_valid_until);
+            dateStr = d.toLocaleDateString('ru-RU');
         }
+        details.querySelector('.cp-lic-date').textContent = dateStr;
+        details.style.display = 'block';
 
-        function addWasteItem() {
-            const section = document.getElementById('waste-search-section');
-            section.style.display = 'block';
-            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            document.getElementById('waste-search').focus();
+        const snapshot = {
+            name: data.name,
+            inn: data.inn,
+            kpp: data.kpp,
+            legal_address: data.legal_address,
+            license_number: data.license_number,
+            license_valid_until: dateStr
+        };
+        document.getElementById(type + '-snapshot').value = JSON.stringify(snapshot);
+    }
+
+    function swapCompanies() {
+        ['value', 'snapshot', 'search'].forEach(suffix => {
+            const p = document.getElementById('provider-' + suffix);
+            const r = document.getElementById('receiver-' + suffix);
+            const tmp = p.value;
+            p.value = r.value;
+            r.value = tmp;
+        });
+        const pDet = document.getElementById('provider-details');
+        const rDet = document.getElementById('receiver-details');
+        const tmpHtml = pDet.innerHTML;
+        const tmpDisp = pDet.style.display;
+        pDet.innerHTML = rDet.innerHTML;
+        pDet.style.display = rDet.style.display;
+        rDet.innerHTML = tmpHtml;
+        rDet.style.display = tmpDisp;
+    }
+
+    function clearWasteSelection() {
+        document.getElementById('waste-search').value = '';
+        currentWasteData = null;
+        document.getElementById('selected-waste-display').classList.add('d-none');
+        document.getElementById('waste-search').focus();
+    }
+
+    function addWasteItem() {
+        document.getElementById('waste-search-section').style.display = 'block';
+        if (typeof handleRole === 'function') handleRole();
+        document.getElementById('waste-search').focus();
+    }
+
+    function addSelectedWaste() {
+        if (!currentWasteData) return alert('Выберите отход');
+        const amount = document.getElementById('temp-amount').value.trim().replace(',', '.');
+        if (!amount || isNaN(amount)) return alert('Укажите количество');
+        
+        const ops = [];
+        document.querySelectorAll('[id^="temp-op"]:checked').forEach(cb => ops.push(cb.value));
+        if (ops.length === 0) return alert('Выберите вид обращения');
+
+        wasteItems.push({
+            id: ++wasteItemCounter,
+            name: currentWasteData.name,
+            fkko_code: currentWasteData.code,
+            hazard_class: currentWasteData.hazard_class,
+            amount: parseFloat(amount),
+            operation_types: ops
+        });
+        renderWasteItems();
+        resetWasteForm();
+    }
+
+    function removeWasteItem(id) {
+        wasteItems = wasteItems.filter(i => i.id !== id);
+        renderWasteItems();
+    }
+
+    function renderWasteItems() {
+        const container = document.getElementById('waste-items-container');
+        if (wasteItems.length === 0) {
+            container.innerHTML = '<div class="alert alert-info">Отходы не добавлены.</div>';
+            return;
         }
+        container.innerHTML = wasteItems.map((item, idx) => `
+            <div class="card mb-2 border-0 shadow-sm"><div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold small">${idx+1}. ${item.name}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">${item.fkko_code} | ${item.amount} т | ${item.operation_types.join(', ')}</div>
+                        <input type="hidden" name="wastes[${idx}][name]" value="${item.name}">
+                        <input type="hidden" name="wastes[${idx}][fkko_code]" value="${item.fkko_code}">
+                        <input type="hidden" name="wastes[${idx}][hazard_class]" value="${item.hazard_class}">
+                        <input type="hidden" name="wastes[${idx}][amount]" value="${item.amount}">
+                        <input type="hidden" name="wastes[${idx}][operation_types]" value="${item.operation_types.join(', ')}">
+                    </div>
+                    <button type="button" class="btn btn-sm text-danger border-0" onclick="removeWasteItem(${item.id})"><i class="bi bi-trash"></i></button>
+                </div>
+            </div></div>
+        `).join('');
+    }
 
-        function addSelectedWaste() {
-            if (!currentWasteData) {
-                alert('Пожалуйста, выберите отход из списка');
-                return;
-            }
-            const amount = document.getElementById('temp-amount').value.trim().replace(',', '.');
-            if (!amount || parseFloat(amount) <= 0) {
-                alert('Пожалуйста, укажите корректное количество');
-                return;
-            }
-            const operationTypes = [];
-            document.querySelectorAll('[id^="temp-op"]:checked').forEach(cb => {
-                operationTypes.push(cb.value);
-            });
-            if (operationTypes.length === 0) {
-                alert('Пожалуйста, выберите хотя бы один вид обращения');
-                return;
-            }
-            const wasteItem = {
-                id: ++wasteItemCounter,
-                name: currentWasteData.name,
-                fkko_code: currentWasteData.code,
-                hazard_class: currentWasteData.hazard_class,
-                amount: parseFloat(amount),
-                operation_types: operationTypes
-            };
-            wasteItems.push(wasteItem);
-            renderWasteItems();
-            resetWasteForm();
-        }
+    function resetWasteForm() {
+        document.getElementById('waste-search').value = '';
+        document.getElementById('temp-amount').value = '';
+        document.querySelectorAll('[id^="temp-op"]').forEach(cb => cb.checked = false);
+        currentWasteData = null;
+        document.getElementById('selected-waste-display').classList.add('d-none');
+        document.getElementById('waste-search-section').style.display = 'none';
+    }
 
-        function removeWasteItem(id) {
-            wasteItems = wasteItems.filter(item => item.id !== id);
-            renderWasteItems();
-        }
+    document.addEventListener('DOMContentLoaded', function () {
+        renderWasteItems();
 
-        function renderWasteItems() {
-            const container = document.getElementById('waste-items-container');
-            if (wasteItems.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">Отходы не добавлены. Нажмите «Добавить отход» для начала.</div>';
-                return;
-            }
-            let html = '';
-            wasteItems.forEach((item, index) => {
-                html += `
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-2">${index + 1}. ${item.name}</h6>
-                                    <div class="small text-muted mb-2">
-                                        <strong>Код ФККО:</strong> ${item.fkko_code} |
-                                        <strong>Класс опасности:</strong> ${item.hazard_class} |
-                                        <strong>Количество:</strong> ${item.amount} т
-                                    </div>
-                                    <div class="small">
-                                        <strong>Вид обращения:</strong> ${item.operation_types.join(', ')}
-                                    </div>
-                                    <input type="hidden" name="wastes[${index}][name]" value="${item.name}">
-                                    <input type="hidden" name="wastes[${index}][fkko_code]" value="${item.fkko_code}">
-                                    <input type="hidden" name="wastes[${index}][hazard_class]" value="${item.hazard_class}">
-                                    <input type="hidden" name="wastes[${index}][amount]" value="${item.amount}">
-                                    <input type="hidden" name="wastes[${index}][operation_types]" value="${item.operation_types.join(', ')}">
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-danger ms-3" onclick="removeWasteItem(${item.id})">
-                                    <i class="bi bi-trash"></i> Удалить
-                                </button>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function resetWasteForm() {
-            document.getElementById('waste-search').value = '';
-            document.getElementById('temp-amount').value = '';
-            document.querySelectorAll('[id^="temp-op"]').forEach(cb => {
-                cb.checked = false;
-            });
-            userModifiedOp8 = false;
-            currentWasteData = null;
-            document.getElementById('selected-waste-display').classList.add('d-none');
-            document.getElementById('waste-search-section').style.display = 'none';
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            renderWasteItems();
-
-            const op8 = document.getElementById('temp-op8');
-            const otherOps = document.querySelectorAll('[id^="temp-op"]:not(#temp-op8)');
-
-            if (op8) {
-                op8.addEventListener('change', () => {
-                    userModifiedOp8 = true;
-                });
-                const updateOp8 = () => {
-                    if (!userModifiedOp8) {
-                        let anyChecked = Array.from(otherOps).some(c => c.checked);
-                        op8.checked = anyChecked;
-                    }
-                };
-                otherOps.forEach(cb => cb.addEventListener('change', updateOp8));
-            }
-
-            const form = document.querySelector('form[action="{{ route('acts.manual.store') }}"]');
-            form.addEventListener('submit', function (e) {
-                if (wasteItems.length === 0) {
-                    e.preventDefault();
-                    alert('Пожалуйста, добавьте хотя бы один вид отхода');
-                    return false;
-                }
-            });
-
-            const input   = document.getElementById('waste-search');
-            const results = document.getElementById('waste-results');
-            const display = document.getElementById('selected-waste-display');
-            const dName   = document.getElementById('display-name');
-            const dFkko   = document.getElementById('display-fkko');
-            const dHazard = document.getElementById('display-hazard');
-
-            let timeout = null;
-
-            input.addEventListener('input', function () {
-                clearTimeout(timeout);
-                const query = this.value.trim();
-                if (query.length < 2) {
-                    results.style.display = 'none';
-                    return;
-                }
-                timeout = setTimeout(() => {
-                    fetch(`/fkko/search?q=${encodeURIComponent(query)}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            results.innerHTML = '';
-                            if (data.length > 0) {
-                                data.forEach(item => {
-                                    let fCode = item.code;
-                                    let cleanCode = (fCode || '').replace(/\s+/g, '');
-                                    if (cleanCode.length === 11) {
-                                        fCode = cleanCode.substring(0,1) + ' ' + cleanCode.substring(1,3) + ' ' + 
-                                                cleanCode.substring(3,6) + ' ' + cleanCode.substring(6,8) + ' ' + 
-                                                cleanCode.substring(8,10) + ' ' + cleanCode.substring(10,11);
-                                    }
-                                    const a = document.createElement('a');
-                                    a.href = '#';
-                                    a.className = 'list-group-item list-group-item-action py-2';
-                                    a.innerHTML = `
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="small fw-bold text-wrap" style="max-width: 78%;">${item.name}</div>
-                                            <span class="badge bg-primary ms-2 text-nowrap">${fCode}</span>
-                                        </div>`;
-                                    a.onclick = (e) => {
-                                        e.preventDefault();
-                                        currentWasteData = { name: item.name, code: fCode, hazard_class: item.hazard_class };
-                                        dName.textContent   = item.name;
-                                        dFkko.textContent   = fCode;
-                                        dHazard.textContent = item.hazard_class;
-                                        display.classList.remove('d-none');
-                                        input.value = item.name;
-                                        results.style.display = 'none';
-                                    };
-                                    results.appendChild(a);
-                                });
-                                results.style.display = 'block';
-                            } else {
-                                results.style.display = 'none';
-                            }
+        ['provider', 'receiver'].forEach(type => {
+            const input = document.getElementById(type + '-search');
+            const res = document.getElementById(type + '-results');
+            let t = null;
+            input.addEventListener('input', () => {
+                clearTimeout(t);
+                const q = input.value.trim();
+                if (q.length < 2) return res.style.display = 'none';
+                t = setTimeout(() => {
+                    fetch('/counterparties/search?q=' + encodeURIComponent(q))
+                        .then(r => r.json()).then(data => {
+                            res.innerHTML = data.map(cp => `
+                                <a href="#" class="list-group-item list-group-item-action py-1 small" onclick="event.preventDefault(); window.selCP('${type}', ${JSON.stringify(cp).replace(/"/g, '&quot;')})">
+                                    ${cp.name} <span class="badge bg-light text-dark border float-end">${cp.inn || ''}</span>
+                                </a>
+                            `).join('');
+                            res.style.display = data.length ? 'block' : 'none';
                         });
                 }, 300);
             });
+            input.addEventListener('blur', () => setTimeout(() => res.style.display = 'none', 200));
+        });
+        window.selCP = (type, cp) => { updateCpDetails(type, cp); document.getElementById(type + '-results').style.display = 'none'; };
 
-            document.addEventListener('click', function (e) {
-                if (!input.contains(e.target) && !results.contains(e.target)) {
-                    results.style.display = 'none';
-                }
-            });
+        const cpModal = new bootstrap.Modal(document.getElementById('addCpModal'));
+        let targetCP = '';
+        document.querySelectorAll('.cp-add-btn').forEach(b => b.onclick = () => {
+            targetCP = b.dataset.target;
+            document.getElementById('cp-modal-name').value = document.getElementById(targetCP + '-search').value;
+            cpModal.show();
         });
 
-async function findCompanyByInn(targetFieldId) {
-    const inn = prompt('Введите ИНН организации для поиска:');
-    if (!inn) return;
+        document.getElementById('cp-modal-save').onclick = () => {
+            const name = document.getElementById('cp-modal-name').value.trim();
+            const inn = document.getElementById('cp-modal-inn').value.trim();
+            if (!name) return alert('Имя обязательно');
+            if (inn && !validateInn(inn)) return alert('Неверный ИНН');
 
-    const btn = document.querySelector(`button[onclick="findCompanyByInn('${targetFieldId}')"]`);
-    const originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+            fetch('/counterparties', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                body: JSON.stringify({
+                    name, inn, kpp: document.getElementById('cp-modal-kpp').value,
+                    legal_address: document.getElementById('cp-modal-addr').value,
+                    license_number: document.getElementById('cp-modal-lic').value,
+                    license_valid_until: document.getElementById('cp-modal-lic-date').value
+                })
+            }).then(r => r.json()).then(res => {
+                if (res.error) alert(res.error);
+                else { updateCpDetails(targetCP, res); cpModal.hide(); }
+            });
+        };
 
-    try {
-        const response = await fetch(`{{ route('checko.inn') }}?inn=${inn}`);
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || 'Ошибка при поиске');
+        const tempOp8 = document.getElementById('temp-op8');
+        const actType = document.querySelector('input[name="act_type"]').value;
+        const comp = JSON.parse(document.getElementById('current-company-info').value);
+
+        function handleRole() {
+            if (actType !== 'transfer' || !tempOp8) return;
+            
+            const getInn = (type) => {
+                const snap = document.getElementById(type + '-snapshot').value;
+                if (!snap) return '';
+                try { return JSON.parse(snap).inn || ''; } catch(e) { return ''; }
+            };
+
+            const pInn = getInn('provider');
+            const rInn = getInn('receiver');
+            const cInn = comp.inn;
+            const isChecked = tempOp8.checked;
+
+            if (isChecked) {
+                if (rInn === cInn) {
+                    swapCompanies();
+                } else if (pInn !== cInn) {
+                    updateCpDetails('provider', comp);
+                    if (getInn('receiver') === cInn) updateCpDetails('receiver', null);
+                }
+            } else {
+                if (pInn === cInn) {
+                    swapCompanies();
+                } else if (rInn !== cInn) {
+                    updateCpDetails('receiver', comp);
+                    if (getInn('provider') === cInn) updateCpDetails('provider', null);
+                }
+            }
         }
 
-        const data = await response.json();
-        const field = document.getElementById(targetFieldId);
+        if (tempOp8) tempOp8.onchange = handleRole;
+        if (actType === 'transfer') handleRole();
 
-        if (data.name) {
-            field.value = data.name;
-            alert(`Найдена организация: ${data.name}`);
-        } else {
-            alert('Организация не найдена');
-        }
-    } catch (error) {
-        console.error('Checko Lookup Error:', error);
-        alert('Ошибка: ' + error.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-    }
-}
+        const wSearch = document.getElementById('waste-search');
+        const wRes = document.getElementById('waste-results');
+        let wt = null;
+        wSearch.addEventListener('input', () => {
+            clearTimeout(wt);
+            const q = wSearch.value.trim();
+            if (q.length < 2) return wRes.style.display = 'none';
+            wt = setTimeout(() => {
+                fetch('/fkko/search?q=' + encodeURIComponent(q)).then(r => r.json()).then(data => {
+                    wRes.innerHTML = data.map(i => `<a href="#" class="list-group-item list-group-item-action py-1 small" onclick="event.preventDefault(); window.selW(${JSON.stringify(i).replace(/"/g, '&quot;')})">${i.name} <span class="badge bg-primary float-end">${i.code}</span></a>`).join('');
+                    wRes.style.display = data.length ? 'block' : 'none';
+                });
+            }, 300);
+        });
+        window.selW = (i) => {
+            currentWasteData = { name: i.name, code: i.code, hazard_class: i.hazard_class };
+            document.getElementById('display-name').textContent = i.name;
+            document.getElementById('display-fkko').textContent = i.code;
+            document.getElementById('display-hazard').textContent = i.hazard_class;
+            document.getElementById('selected-waste-display').classList.remove('d-none');
+            wSearch.value = i.name;
+            wRes.style.display = 'none';
+        };
+    });
 </script>
 @endpush

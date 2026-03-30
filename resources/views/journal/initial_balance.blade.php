@@ -28,11 +28,12 @@
                                 </button>
                             </div>
 
-                            <div class="d-flex justify-content-end border-top pt-3">
+                            <div class="d-flex justify-content-end border-top pt-3 text-nowrap">
                                 <a href="{{ route('journal.index') }}" class="btn btn-light me-2">Отмена</a>
-                                <button type="submit" class="btn btn-dark me-2"
+                                <button type="submit" class="btn me-2" 
+                                    style="background-color: #FF4C2B; border-color: #FF4C2B; color: white;"
                                     onclick="clearWastesAndSubmit(event)">Продолжить без ввода остатков</button>
-                                <button type="submit" class="btn btn-primary px-4">Сохранить и продолжить</button>
+                                <button type="submit" class="btn btn-dark px-4">Сохранить и продолжить</button>
                             </div>
                         </form>
                     </div>

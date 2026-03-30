@@ -55,17 +55,28 @@ class ManualActController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'act_type'         => 'required|in:transfer,processing,utilization,neutralization,storage,burial',
-            'date'             => 'required|date',
-            'contract_details' => 'nullable|string|max:500',
-            'provider'         => 'required|string|max:255',
-            'receiver'         => 'required|string|max:255',
-            'wastes'           => 'required|array|min:1',
-            'wastes.*.name'    => 'required|string',
-            'wastes.*.fkko_code'   => 'required|string',
-            'wastes.*.hazard_class'=> 'required|string',
-            'wastes.*.amount'      => 'required|numeric|min:0',
-            'wastes.*.operation_types' => 'required|string',
+            'act_type'            => 'required|in:transfer,processing,utilization,neutralization,storage,burial',
+            'date'                => 'required|date',
+            'contract_details'    => 'nullable|string|max:500',
+            'contract_validity'   => 'nullable|string|max:255',
+            'provider'            => 'required|string|max:255',
+            'provider_snapshot'   => 'nullable|string',
+            'receiver'            => 'required|string|max:255',
+            'receiver_snapshot'   => 'nullable|string',
+            'wastes'              => 'required|array|min:1',
+            'wastes.*.name'       => 'required|string',
+            'wastes.*.fkko_code'      => 'required|string',
+            'wastes.*.hazard_class'   => 'required|string',
+            'wastes.*.amount'         => 'required|numeric|min:0',
+            'wastes.*.operation_types'=> 'required|string',
+        ], [], [
+            'date'              => 'Дата',
+            'provider'          => 'Поставщик',
+            'receiver'          => 'Получатель',
+            'wastes'            => 'Отходы',
+            'wastes.*.name'     => 'Наименование отхода',
+            'wastes.*.fkko_code'    => 'Код ФККО',
+            'wastes.*.amount'       => 'Количество',
         ]);
 
         $tenantService = app(TenantService::class);
@@ -74,6 +85,12 @@ class ManualActController extends Controller
         if (!$company) {
             return back()->with('error', 'Компания не выбрана');
         }
+
+        $pSnap = $request->provider_snapshot ? json_decode($request->provider_snapshot, true) : null;
+        $rSnap = $request->receiver_snapshot ? json_decode($request->receiver_snapshot, true) : null;
+
+        if (!$pSnap) $pSnap = ['name' => $request->provider];
+        if (!$rSnap) $rSnap = ['name' => $request->receiver];
 
         $items = [];
         foreach ($request->wastes as $waste) {
@@ -88,11 +105,14 @@ class ManualActController extends Controller
         }
 
         $actData = [
-            'date'             => $request->date,
-            'contract_details' => $request->contract_details,
-            'provider'         => $request->provider,
-            'receiver'         => $request->receiver,
-            'items'            => $items,
+            'date'               => $request->date,
+            'contract_details'   => $request->contract_details,
+            'contract_validity'  => $request->contract_validity,
+            'provider'           => $request->provider,
+            'provider_snapshot'  => $pSnap,
+            'receiver'           => $request->receiver,
+            'receiver_snapshot'  => $rSnap,
+            'items'              => $items,
         ];
 
         $actNumber = Act::nextActNumber($company->id);
@@ -142,6 +162,24 @@ class ManualActController extends Controller
         $typeShort = str_replace([' ', '/'], '_', mb_strtoupper($act->getTypeLabel(), 'UTF-8'));
         $filename  = "{$typeShort}_{$act->act_number}_{$dateStr}.doc";
 
+        $pSnap = json_decode($act->provider_snapshot ?? '{}', true) ?: [];
+        $rSnap = json_decode($act->receiver_snapshot ?? '{}', true) ?: [];
+
+        $formatSnapshot = function($snap, $fallbackName) {
+            if (empty($snap)) return "<b>" . htmlspecialchars($fallbackName) . "</b>";
+            $res = "<b>" . htmlspecialchars($snap['name'] ?? $fallbackName) . "</b>";
+            if (!empty($snap['inn'])) $res .= "<br>ИНН: " . htmlspecialchars($snap['inn']);
+            if (!empty($snap['kpp'])) $res .= " &nbsp; КПП: " . htmlspecialchars($snap['kpp']);
+            if (!empty($snap['legal_address'])) $res .= "<br>Адрес: " . htmlspecialchars($snap['legal_address']);
+            if (!empty($snap['license_number'])) {
+                $res .= "<br>Лицензия: " . htmlspecialchars($snap['license_number']);
+                if (!empty($snap['license_valid_until'])) $res .= " до " . htmlspecialchars($snap['license_valid_until']);
+            }
+            return $res;
+        };
+
+        $providerHeader = $formatSnapshot($pSnap, $actData['provider'] ?? '—');
+        $receiverHeader = $formatSnapshot($rSnap, $actData['receiver'] ?? '—');
 
         $rows = '';
         $totalQuantity = 0;
@@ -176,7 +214,7 @@ class ManualActController extends Controller
         }
         $rows .= "
                 <tr>
-                    <td colspan='3' style='text-align: right; background-color: #e0e0e0;'><b>Итого принято отходов:</b></td>
+                    <td colspan='3' style='text-align: right; background-color: #e0e0e0;'><b>Итого:</b></td>
                     <td style='font-weight: bold; background-color: #e0e0e0;'>" . number_format($totalQuantity, 3, ',', '') . " т</td>
                     <td colspan='2' style='background-color: #e0e0e0;'></td>
                 </tr>";
@@ -189,25 +227,24 @@ class ManualActController extends Controller
             <meta charset='utf-8'>
             <style>
                 @page { margin: 2cm; }
-                body  { font-family: 'Times New Roman', serif; font-size: 12pt; margin: 0; }
+                body  { font-family: 'Times New Roman', serif; font-size: 11pt; margin: 0; }
                 .header-block { text-align: center; margin-bottom: 20pt; }
                 .act-title    { font-size: 14pt; font-weight: bold; }
-                .act-subtitle { font-size: 13pt; font-weight: bold; margin-top: 4pt; }
-                .org-block    { font-size: 11pt; margin-bottom: 14pt; }
-                table { border-collapse: collapse; width: 100%; }
-                th, td {
+                .act-subtitle { font-size: 12pt; font-weight: bold; margin-top: 4pt; }
+                .org-table    { border: none; margin-bottom: 20pt; width: 100%; }
+                .org-table td { border: none; padding: 4pt 0; text-align: left; vertical-align: top; font-size: 10pt; width: 50%; }
+                table.data-table { border-collapse: collapse; width: 100%; }
+                table.data-table th, table.data-table td {
                     border: 1pt solid black;
                     padding: 5pt 6pt;
-                    font-family: 'Times New Roman', serif;
-                    font-size: 11pt;
+                    font-size: 10pt;
                     vertical-align: middle;
                     text-align: center;
                 }
-                th { font-weight: bold; background: #f5f5f5; }
+                table.data-table th { font-weight: bold; background: #f5f5f5; }
                 .text-start { text-align: left; }
-                .sign-block { margin-top: 30pt; font-size: 11pt; }
-                .sign-line  { display: inline-block; width: 180pt;
-                              border-bottom: 1pt solid black; margin: 0 6pt; }
+                .sign-block { margin-top: 40pt; font-size: 10pt; }
+                .sign-line  { display: inline-block; width: 150pt; border-bottom: 1pt solid black; margin: 0 4pt; }
             </style>
         </head>
         <body>
@@ -216,22 +253,22 @@ class ManualActController extends Controller
                 <div class='act-subtitle'>{$subtitle}</div>
             </div>
 
-            <div class='org-block'>
-                <b>Организация:</b> " . htmlspecialchars($company->name) . "<br>
-                <b>ИНН:</b> " . htmlspecialchars($company->inn ?? '—') . " &nbsp;&nbsp;
-                <b>ОГРН:</b> " . htmlspecialchars($company->ogrn ?? '—') . "<br>
-                <b>Адрес:</b> " . htmlspecialchars($company->legal_address ?? '—') . "
-            </div>
+            <table class='org-table'>
+                <tr>
+                    <td><b>ПОСТАВЩИК:</b><br>{$providerHeader}</td>
+                    <td><b>ПОЛУЧАТЕЛЬ:</b><br>{$receiverHeader}</td>
+                </tr>
+            </table>
 
-            <table>
+            <table class='data-table'>
                 <thead>
                     <tr>
-                        <th width='35'>№ п/п</th>
+                        <th width='35'>№</th>
                         <th>Наименование отхода</th>
-                        <th width='120'>Код по ФККО</th>
-                        <th width='60'>Вес</th>
-                        <th>От кого получены</th>
-                        <th>Конечный вид деятельности с отходом</th>
+                        <th width='110'>ФККО</th>
+                        <th width='60'>Вес (т)</th>
+                        <th>Договор / Контрагент</th>
+                        <th>Вид обращения</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -240,8 +277,18 @@ class ManualActController extends Controller
             </table>
 
             <div class='sign-block'>
-                <p>Исполнитель:&nbsp; <span class='sign-line'></span> / <span class='sign-line'></span> /</p>
-                <p>Заказчик:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class='sign-line'></span> / <span class='sign-line'></span> /</p>
+                <table style='border:none; width:100%;'>
+                    <tr>
+                        <td style='border:none; width:50%; text-align:left;'>
+                            <b>Поставщик (Исполнитель):</b><br><br>
+                            ________________ / <span class='sign-line'></span> /
+                        </td>
+                        <td style='border:none; width:50%; text-align:left;'>
+                            <b>Получатель (Заказчик):</b><br><br>
+                            ________________ / <span class='sign-line'></span> /
+                        </td>
+                    </tr>
+                </table>
             </div>
         </body>
         </html>";

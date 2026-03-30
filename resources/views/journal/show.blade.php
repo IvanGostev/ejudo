@@ -228,7 +228,7 @@
                     <div class="bg-white p-4 mx-auto shadow-sm" style="max-width: 350mm; min-height: 210mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif;">
                         <div class="table-responsive">
                             <table class="table table-bordered table-sm text-center align-middle caption-top"
-                                style="font-size: 0.7rem; border-color: #000;">
+                                style="font-size: 0.9rem; border-color: #000;">
                                 <caption style="color: #000; font-weight: bold;">Обобщенные данные (Таблица 2)</caption>
                                  <thead class="table-light">
                                     <tr>
@@ -301,7 +301,7 @@
                 <div class="tab-pane fade" id="sheet3">
                     <div class="bg-white p-4 mx-auto shadow-sm" style="max-width: 350mm; min-height: 210mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif;">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-sm text-center align-middle caption-top" style="font-size: 0.75rem; border-color: #000;">
+                            <table class="table table-bordered table-sm text-center align-middle caption-top" style="font-size: 0.9rem; border-color: #000;">
                                 <caption style="color: #000; font-weight: bold;">Передано (Таблица 3)</caption>
                                 <thead class="table-light">
                                     <tr>
@@ -356,7 +356,7 @@
                 <div class="tab-pane fade" id="sheet4">
                     <div class="bg-white p-4 mx-auto shadow-sm" style="max-width: 350mm; min-height: 210mm; border: 1px solid #dee2e6; color: #000; font-family: 'Times New Roman', serif;">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-sm text-center align-middle caption-top" style="font-size: 0.75rem; border-color: #000;">
+                            <table class="table table-bordered table-sm text-center align-middle caption-top" style="font-size: 0.9rem; border-color: #000;">
                                 <caption style="color: #000; font-weight: bold;">Получено (Таблица 4)</caption>
                                 <thead class="table-light">
                                     <tr>
@@ -368,7 +368,6 @@
                                         <th rowspan="3">Сведения о лицах, от которых получены отходы</th>
                                         <th rowspan="3">Дата и номер договора на передачу отходов</th>
                                         <th rowspan="3">Срок действия договора</th>
-                                        <th rowspan="3">Реквизиты лицензии на осуществление деятельности по сбору, транспортированию, обработке, утилизации, обезвреживанию, размещению отходов I-IV классов опасности</th>
                                     </tr>
                                     <tr>
                                         <th rowspan="2">всего</th>
@@ -383,7 +382,7 @@
                                         <th>для захоронения</th>
                                     </tr>
                                     <tr class="text-muted" style="font-size: 0.7rem;">
-                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th>
+                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -403,7 +402,6 @@
                                             <td class="text-start" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $item['counterparty'] }}">{{ $item['counterparty'] }}</td>
                                             <td>{{ $item['contract_details'] ?? '' }}</td>
                                             <td>{{ $item['contract_validity'] ?? '' }}</td>
-                                            <td>{{ $item['license'] ?? '' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

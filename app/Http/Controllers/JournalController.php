@@ -113,7 +113,8 @@ class JournalController extends Controller
         $initialBalancesExist = InitialBalance::where('company_id', $company->id)->exists();
 
         if (!$anyJournalExists && !$initialBalancesExist) {
-            return redirect()->route('journal.initial-balance.create', ['period' => $periodInput]);
+            $tariffsUrl = route('subscription.index');
+            return back()->with('error', "Сначала введите начальные остатки или добавьте акты.<br><br><a href='{$tariffsUrl}' class='btn btn-warning btn-sm fw-bold'>ТАРИФЫ</a>");
         }
 
         return $this->generateJournal($company, $periodInput, $roleKey, $polygonId);
@@ -162,21 +163,21 @@ class JournalController extends Controller
             ->first();
 
 
-        $prevBalances = [];
         $wasteStats = [];
 
         if (!$prevJournal) {
             $initials = InitialBalance::where('company_id', $company->id)->get();
             foreach ($initials as $init) {
                 $f_code = $this->formatFkko($init->fkko_code);
-                $prevBalances[$init->waste_name] = (float) $init->amount;
                 $wasteStats[$init->waste_name] = $this->emptyStats($f_code, $init->hazard_class);
+                $wasteStats[$init->waste_name]['start_accumulation'] = (float) $init->amount;
             }
         } else {
             foreach ($prevJournal->table2_data as $item) {
                 $f_code = $this->formatFkko($item['fkko'] ?? '');
-                $prevBalances[$item['name']] = (float) $item['balance_end'];
                 $wasteStats[$item['name']] = $this->emptyStats($f_code, $item['hazard'] ?? '');
+                $wasteStats[$item['name']]['start_accumulation'] = (float) ($item['end_accumulation'] ?? $item['balance_end'] ?? 0);
+                $wasteStats[$item['name']]['start_storage'] = (float) ($item['end_storage'] ?? 0);
             }
         }
 
@@ -231,7 +232,7 @@ class JournalController extends Controller
                     $wasteStats[$name]['generated'] += $qty;
                 }
 
-                if ($isWasteRecipient && !$isInternal) {
+                if ($isWasteRecipient && !$isInternal && $actType === 'transfer') {
                     $wasteStats[$name]['received'] += $qty;
                 }
 
@@ -252,10 +253,21 @@ class JournalController extends Controller
                 }
 
                 if ($isWasteGenerator && !$isInternal && $actType === 'transfer') {
+                    $recipientLabel = $data['receiver'] ?? '';
+                    $recipientLicense = $company->license_details ?? '';
+                    
+                    if (!empty($data['receiver_snapshot'])) {
+                        $rs = is_array($data['receiver_snapshot']) ? $data['receiver_snapshot'] : json_decode($data['receiver_snapshot'], true);
+                        if ($rs) {
+                            $recipientLabel = $rs['name'] . (!empty($rs['inn']) ? " (ИНН: {$rs['inn']})" : "");
+                            $recipientLicense = $rs['license_number'] ?? $recipientLicense;
+                        }
+                    }
+
                     $table3_data[] = [
                         'date'              => $data['date'] ?? '',
                         'number'            => $act->act_number,
-                        'counterparty'      => $data['receiver'] ?? '',
+                        'counterparty'      => $recipientLabel,
                         'waste'             => $name,
                         'fkko'              => $fkko,
                         'hazard'            => $hazard,
@@ -267,16 +279,27 @@ class JournalController extends Controller
                         'amt_store'         => 0,
                         'amt_bury'          => 0,
                         'contract_details'  => $data['contract_details'] ?? '',
-                        'contract_validity' => '',
-                        'license'           => $company->license_details ?? '',
+                        'contract_validity' => $data['contract_validity'] ?? '',
+                        'license'           => $recipientLicense,
                     ];
                 }
 
                 if ($isWasteRecipient && !$isInternal) {
+                    $providerLabel = $data['provider'] ?? '';
+                    $providerLicense = $company->license_details ?? '';
+
+                    if (!empty($data['provider_snapshot'])) {
+                        $ps = is_array($data['provider_snapshot']) ? $data['provider_snapshot'] : json_decode($data['provider_snapshot'], true);
+                        if ($ps) {
+                            $providerLabel = $ps['name'] . (!empty($ps['inn']) ? " (ИНН: {$ps['inn']})" : "");
+                            $providerLicense = $ps['license_number'] ?? $providerLicense;
+                        }
+                    }
+
                     $table4_data[] = [
                         'date'              => $data['date'] ?? '',
                         'number'            => $act->act_number,
-                        'counterparty'      => $data['provider'] ?? '',
+                        'counterparty'      => $providerLabel,
                         'waste'             => $name,
                         'fkko'              => $fkko,
                         'hazard'            => $hazard,
@@ -289,47 +312,56 @@ class JournalController extends Controller
                         'amt_store'         => str_contains($opItem, 'хран') ? $qty : 0,
                         'amt_bury'          => str_contains($opItem, 'захорон') ? $qty : 0,
                         'contract_details'  => $data['contract_details'] ?? '',
-                        'contract_validity' => '',
-                        'license'           => $company->license_details ?? '',
+                        'contract_validity' => $data['contract_validity'] ?? '',
+                        'license'           => $providerLicense,
                     ];
                 }
             }
         }
 
-        // Загружаем справочник ФККО для обогащения Таблицы 1 (столбцы 5, 6, 7)
         $fkkoCatalog = \App\Models\FkkoCode::whereNotNull('code')
             ->get(['code', 'origin', 'aggregate_state', 'chemical_composition'])
-            ->keyBy(fn($f) => preg_replace('/\s+/', '', $f->code)); // индексируем без пробелов для надёжного поиска
+            ->keyBy(fn($f) => preg_replace('/\s+/', '', $f->code));
 
         $table2 = [];
-        $uniqueWastes = array_unique(array_merge(array_keys($prevBalances), array_keys($wasteStats)));
-        foreach ($uniqueWastes as $wasteName) {
-            $start = $prevBalances[$wasteName] ?? 0;
-            $s = $wasteStats[$wasteName];
-
-
-            $end = $start + $s['generated'] + $s['received'] - $s['processed'] - $s['utilized'] - $s['neutralized'] - $s['transferred_total'] - $s['buried'];
+        foreach ($wasteStats as $wasteName => $s) {
+            
+            $endStorage = $s['start_storage'] + $s['stored'];
+            
+            $totalAccumAvailable = $s['start_accumulation'] + $s['generated'] + $s['received'];
+            $placedTotal = $s['stored'] + $s['buried'];
+            
+            $endAccumulation = $totalAccumAvailable 
+                - $s['processed'] 
+                - $s['utilized'] 
+                - $s['neutralized'] 
+                - $s['transferred_total'] 
+                - $placedTotal;
 
             $table2[] = [
                 'name' => $wasteName,
                 'fkko' => $s['fkko'],
                 'hazard' => $s['hazard'],
-                'balance_begin' => $start,
+                'start_storage' => $s['start_storage'],
+                'start_accumulation' => $s['start_accumulation'],
+                'balance_begin' => $s['start_accumulation'],
                 'generated' => $s['generated'],
                 'received' => $s['received'],
                 'processed' => $s['processed'],
                 'utilized' => $s['utilized'],
                 'neutralized' => $s['neutralized'],
                 'transferred_total' => $s['transferred_total'],
-                'trans_process' => $s['trans_process'],
-                'trans_util' => $s['trans_util'],
-                'trans_neutr' => $s['trans_neutr'],
-                'trans_store' => $s['trans_store'],
-                'trans_bury' => $s['trans_bury'],
+                'trans_process' => $s['trans_process'] ?? 0,
+                'trans_util' => $s['trans_util'] ?? 0,
+                'trans_neutr' => $s['trans_neutr'] ?? 0,
+                'trans_store' => $s['trans_store'] ?? 0,
+                'trans_bury' => $s['trans_bury'] ?? 0,
+                'placed_total' => $placedTotal,
                 'stored' => $s['stored'],
                 'buried' => $s['buried'],
-                'accumulated' => $end,
-                'balance_end' => $end
+                'end_storage' => $endStorage,
+                'end_accumulation' => $endAccumulation,
+                'balance_end' => $endAccumulation
             ];
         }
 
@@ -365,9 +397,19 @@ class JournalController extends Controller
 
     private function emptyStats($fkko = '', $hazard = '') {
         return [
-            'generated' => 0, 'received' => 0, 'processed' => 0, 'utilized' => 0, 'neutralized' => 0,
-            'transferred_total' => 0, 'trans_process' => 0, 'trans_util' => 0, 'trans_neutr' => 0, 'trans_store' => 0, 'trans_bury' => 0,
-            'stored' => 0, 'buried' => 0, 'fkko' => $fkko, 'hazard' => $hazard
+            'start_storage' => 0,
+            'start_accumulation' => 0,
+            'generated' => 0,
+            'received' => 0,
+            'processed' => 0,
+            'utilized' => 0,
+            'neutralized' => 0,
+            'transferred_total' => 0,
+            'trans_process' => 0, 'trans_util' => 0, 'trans_neutr' => 0, 'trans_store' => 0, 'trans_bury' => 0,
+            'stored' => 0,
+            'buried' => 0,
+            'fkko' => $fkko,
+            'hazard' => $hazard
         ];
     }
 
@@ -395,6 +437,9 @@ class JournalController extends Controller
     public function assignPolygon(Request $request, string $id)
     {
         $company = app(\App\Services\TenantService::class)->getCompany();
+        if (!$company) {
+            return redirect('/login')->with('error', 'Сессия истекла. Пожалуйста, войдите снова.');
+        }
         $journal = JudoJournal::where('company_id', $company->id)->findOrFail($id);
 
         $polygonId = $request->input('polygon_id');
@@ -415,6 +460,9 @@ class JournalController extends Controller
 
     public function show(string $id) {
         $company = app(\App\Services\TenantService::class)->getCompany();
+        if (!$company) {
+            return redirect('/login')->with('error', 'Сессия истекла. Пожалуйста, войдите снова.');
+        }
         $journal = JudoJournal::where('company_id', $company->id)->findOrFail($id);
         $wastes  = FkkoCode::orderBy('name')->get(['name', 'code', 'hazard_class']);
 
@@ -442,13 +490,34 @@ class JournalController extends Controller
 
     public function download(string $id) {
         $user = auth()->user();
+        if (!$user) {
+            return redirect('/login')->with('error', 'Сессия истекла. Пожалуйста, войдите снова.');
+        }
         if (!$user->subscription_ends_at || $user->subscription_ends_at->isPast()) {
-            return back()->with('error', 'Скачивание Excel доступно по подписке.');
+            $url = route('subscription.index');
+            return back()->with('error', 'Скачивание Excel доступно по подписке. <a href="' . $url . '" class="btn btn-sm btn-light ms-2">Перейти на Тарифы</a>');
         }
 
         $data = $this->prepareSpreadsheet($id);
         $writer = IOFactory::createWriter($data['spreadsheet'], 'Xls');
         return response()->streamDownload(fn() => $writer->save('php://output'), $data['filename']);
+    }
+
+    public function downloadPdf(string $id) {
+        $user = auth()->user();
+        if (!$user) {
+            return redirect('/login')->with('error', 'Сессия истекла. Пожалуйста, войдите снова.');
+        }
+        if (!$user->subscription_ends_at || $user->subscription_ends_at->isPast()) {
+            $url = route('subscription.index');
+            return back()->with('error', 'Скачивание PDF доступно по подписке. <a href="' . $url . '" class="btn btn-sm btn-light ms-2">Перейти на Тарифы</a>');
+        }
+
+        $data = $this->prepareSpreadsheet($id);
+        $filename = str_replace('.xls', '.pdf', $data['filename']);
+        
+        $writer = IOFactory::createWriter($data['spreadsheet'], 'Mpdf');
+        return response()->streamDownload(fn() => $writer->save('php://output'), $filename);
     }
 
     private function prepareSpreadsheet(string $id) {
@@ -521,8 +590,6 @@ class JournalController extends Controller
                 }
 
                 if ($sheetIdx === 1) {
-                    // Столбцы 5-7 (Происхождение, Агр. состояние, Хим. состав) уже заполнены через columns.
-                    // Если остались ячейки за пределами шаблона - заполняем прочерками.
                     for ($extra = $colIndex; $extra <= 8; $extra++) {
                         $colLetter = Coordinate::stringFromColumnIndex($extra);
                         $sheet->setCellValue($colLetter . $r, '');

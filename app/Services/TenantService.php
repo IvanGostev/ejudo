@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\UserCompany;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
 class TenantService
@@ -23,6 +24,18 @@ class TenantService
 
         if (Session::has('tenant_id')) {
             $this->company = UserCompany::find(Session::get('tenant_id'));
+            if ($this->company) {
+                return $this->company;
+            }
+        }
+
+        // Сессия истекла, но пользователь залогинен через "Запомнить меня" —
+        // восстанавливаем компанию из пользователя и сразу сохраняем в сессию.
+        if (Auth::check()) {
+            $this->company = Auth::user()->companies()->first();
+            if ($this->company) {
+                Session::put('tenant_id', $this->company->id);
+            }
         }
 
         return $this->company;

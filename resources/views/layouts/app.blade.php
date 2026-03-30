@@ -195,6 +195,12 @@
                             КОМПАНИИ
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route('counterparties.index') }}"
+                            class="nav-link {{ request()->routeIs('counterparties.*') ? 'active' : '' }}">
+                            КОНТРАГЕНТЫ
+                        </a>
+                    </li>
                     @php
                         $navCurrentCompany = app(\App\Services\TenantService::class)->getCompany();
                     @endphp

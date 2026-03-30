@@ -40,10 +40,10 @@
         {{-- Фильтры (пп. 10, 11) --}}
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-body py-3">
-                <form method="GET" action="{{ route('acts.archive') }}" class="row g-2 align-items-end">
+                <form method="GET" action="{{ route('acts.archive') }}" class="row g-2 align-items-end" id="filter-form">
                     <div class="col-md-3">
                         <label class="form-label small fw-bold mb-1">Тип акта</label>
-                        <select name="act_type" class="form-select form-select-sm">
+                        <select name="act_type" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="">Все типы</option>
                             @foreach(\App\Models\Act::TYPES as $typeKey => $typeLabel)
                                 <option value="{{ $typeKey }}" {{ request('act_type') === $typeKey ? 'selected' : '' }}>{{ $typeLabel }}</option>
@@ -52,7 +52,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-bold mb-1">Год</label>
-                        <select name="period_year" class="form-select form-select-sm">
+                        <select name="period_year" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="">Все годы</option>
                             @foreach($availableYears as $yr)
                                 <option value="{{ $yr }}" {{ request('period_year') == $yr ? 'selected' : '' }}>{{ $yr }}</option>
@@ -61,7 +61,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-bold mb-1">Квартал</label>
-                        <select name="period_quarter" class="form-select form-select-sm">
+                        <select name="period_quarter" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="">—</option>
                             @for($q = 1; $q <= 4; $q++)
                                 <option value="{{ $q }}" {{ request('period_quarter') == $q ? 'selected' : '' }}>{{ $q }} квартал</option>
@@ -70,7 +70,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-bold mb-1">Месяц</label>
-                        <select name="period_month" class="form-select form-select-sm">
+                        <select name="period_month" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="">—</option>
                             @php $months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']; @endphp
                             @foreach($months as $mi => $mn)
@@ -79,12 +79,12 @@
                         </select>
                     </div>
                     <div class="col-md-3 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary btn-sm">Применить</button>
                         <a href="{{ route('acts.archive') }}" class="btn btn-outline-secondary btn-sm">Сбросить</a>
                     </div>
                 </form>
             </div>
         </div>
+
 
         @if($acts->isEmpty())
             <div class="alert alert-info">
