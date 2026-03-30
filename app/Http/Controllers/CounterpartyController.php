@@ -53,7 +53,7 @@ class CounterpartyController extends Controller
         if (!empty($data['inn'])) {
             $inn = preg_replace('/\D/', '', $data['inn']);
             if (!Counterparty::validateInn($inn)) {
-                return response()->json(['error' => 'Неверное контрольное число ИНН'], 422);
+                return response()->json(['error' => 'Неверный ИНН (должен быть от 10 до 12 цифр)'], 422);
             }
             $data['inn'] = $inn;
         }

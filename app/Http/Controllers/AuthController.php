@@ -129,10 +129,12 @@ class AuthController extends Controller
 
         $request->validate([
             'name' => 'required|string',
-            'inn' => 'required|string|size:10,12',
+            'inn' => 'required|string|min:10|max:12',
             'type' => 'required|in:ООО,ИП',
             'ogrn' => 'required|string',
             'legal_address' => 'required|string',
+            'license_details' => 'nullable|string|max:500',
+            'license_valid_until' => 'nullable|date',
         ]);
 
         $user = Auth::user();
@@ -143,6 +145,8 @@ class AuthController extends Controller
             'type' => $request->type,
             'ogrn' => $request->ogrn,
             'legal_address' => $request->legal_address,
+            'license_details' => $request->license_details,
+            'license_valid_until' => $request->license_valid_until,
             'is_active' => true,
         ]);
 

@@ -135,6 +135,7 @@ class CheckoService
                                     }
                                 }
                                 $org = $lic['ЛицОрг'] ?? '';
+                                $licenseValidUntil = $lic['ДатаКон'] ?? null;
 
                                 $licenseDetails = trim(sprintf("№ %s от %s, выд. %s", $num, $date, $org));
 
@@ -144,7 +145,6 @@ class CheckoService
                             }
                         }
                     }
-
 
                     $contactPerson = '';
                     if (!empty($item['Руковод']) && is_array($item['Руковод'])) {
@@ -169,6 +169,7 @@ class CheckoService
                         'ogrn'    => $item['ОГРН'] ?? '',
                         'address' => $item['ЮрАдрес']['АдресРФ'] ?? '',
                         'license_details' => $licenseDetails,
+                        'license_valid_until' => $licenseValidUntil,
                         'contact_person' => $contactPerson,
                         'phone' => $phone,
                         'email' => $email,

@@ -67,14 +67,23 @@
                         </div>
 
                         <h6 class="fw-bold mb-3 border-bottom pb-2">Лицензия на обращение с отходами</h6>
-
-                        <div class="mb-4">
-                            <label class="form-label">Реквизиты лицензии</label>
-                            <input type="text" class="form-control @error('license_details') is-invalid @enderror"
-                                name="license_details" value="{{ old('license_details', $company->license_details) }}"
-                                placeholder="Номер лицензии, дата выдачи, орган, срок действия">
-                            <div class="form-text">Используется в Таблице 3, ст. 14 ЖУДО.</div>
-                            @error('license_details') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        <div class="row">
+                            <div class="col-md-9 mb-3">
+                                <label class="form-label">Реквизиты лицензии</label>
+                                <input type="text" class="form-control @error('license_details') is-invalid @enderror"
+                                    name="license_details" value="{{ old('license_details', $company->license_details) }}"
+                                    placeholder="Номер лицензии, дата выдачи, орган">
+                                @error('license_details') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Срок действия</label>
+                                <input type="date" class="form-control @error('license_valid_until') is-invalid @enderror"
+                                    name="license_valid_until" value="{{ old('license_valid_until', $company->license_valid_until?->format('Y-m-d')) }}">
+                                @error('license_valid_until') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="col-12 mb-4">
+                                <div class="form-text">Используется в Таблице 3, ст. 14 ЖУДО.</div>
+                            </div>
                         </div>
 
                         <h6 class="fw-bold mb-3 border-bottom pb-2">Контактные данные</h6>
@@ -155,6 +164,9 @@
                         document.querySelector('input[name="legal_address"]').value = data.address || '';
                         if (data.license_details) {
                             document.querySelector('input[name="license_details"]').value = data.license_details;
+                        }
+                        if (data.license_valid_until) {
+                            document.querySelector('input[name="license_valid_until"]').value = data.license_valid_until;
                         }
                         if (data.contact_person) {
                             document.querySelector('input[name="contact_person"]').value = data.contact_person;

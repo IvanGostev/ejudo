@@ -30,9 +30,11 @@
     <div class="container py-4">
         <div class="row justify-content-center">
             <div class="col-md-9">
+                <div class="mb-4">
+                    <h4 class="fw-bold">Ручное добавление акта</h4>
+                </div>
 
-        <h5 class="mb-0 fw-bold">Ручное добавление акта</h5>
-                    </div>
+                <div class="card shadow-sm border-0 mb-4">
                     <div class="card-body p-4">
                         <label class="form-label text-muted small text-uppercase fw-bold mb-3">Тип акта</label>
                         <div class="row g-2 mb-0">
@@ -318,45 +320,38 @@
 
     function validateInn(inn) {
         inn = inn.toString().replace(/\D/g, '');
-        if (inn.length === 10) {
-            const weights = [2, 4, 10, 3, 5, 9, 4, 6, 8];
-            let sum = 0;
-            for (let i = 0; i < 9; i++) sum += parseInt(inn[i]) * weights[i];
-            return (parseInt(inn[9]) === (sum % 11) % 10);
-        } else if (inn.length === 12) {
-            const w1 = [7, 2, 4, 10, 3, 5, 9, 4, 6, 8];
-            const w2 = [3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8];
-            let s1 = 0;
-            for (let i = 0; i < 10; i++) s1 += parseInt(inn[i]) * w1[i];
-            let s2 = 0;
-            for (let i = 0; i < 11; i++) s2 += parseInt(inn[i]) * w2[i];
-            return (parseInt(inn[10]) === (s1 % 11) % 10) && (parseInt(inn[11]) === (s2 % 11) % 10);
+        if (inn.length > 9 && inn.length < 13) {
+            return true
         }
-        return false;
+        return false
     }
 
     function updateCpDetails(type, data) {
         const widget = document.getElementById(type + '-widget');
         const details = widget.querySelector('.cp-details');
         const searchInput = widget.querySelector('.cp-search');
-        
+
         if (!data) {
             details.style.display = 'none';
+            searchInput.value = '';
+            document.getElementById(type + '-value').value = '';
+            document.getElementById(type + '-snapshot').value = '';
             return;
         }
 
-        searchInput.value = data.name;
-        document.getElementById(type + '-value').value = data.name;
-        
+        searchInput.value = data.name || '';
+        document.getElementById(type + '-value').value = data.name || '';
+
         details.querySelector('.cp-inn').textContent = data.inn || '—';
         details.querySelector('.cp-kpp').textContent = data.kpp || '—';
-        details.querySelector('.cp-addr').textContent = data.legal_address || '—';
-        details.querySelector('.cp-lic').textContent = data.license_number || '—';
-        
+        details.querySelector('.cp-addr').textContent = data.legal_address || data.address || '—';
+        details.querySelector('.cp-lic').textContent = data.license_number || data.license || '—';
+
         let dateStr = '—';
-        if (data.license_valid_until) {
-            const d = new Date(data.license_valid_until);
-            dateStr = d.toLocaleDateString('ru-RU');
+        const rawDate = data.license_valid_until || data.license_date;
+        if (rawDate) {
+            const d = new Date(rawDate);
+            if (!isNaN(d)) dateStr = d.toLocaleDateString('ru-RU');
         }
         details.querySelector('.cp-lic-date').textContent = dateStr;
         details.style.display = 'block';
@@ -365,29 +360,23 @@
             name: data.name,
             inn: data.inn,
             kpp: data.kpp,
-            legal_address: data.legal_address,
-            license_number: data.license_number,
-            license_valid_until: dateStr
+            legal_address: data.legal_address || data.address,
+            license_number: data.license_number || data.license,
+            license_valid_until: rawDate
         };
         document.getElementById(type + '-snapshot').value = JSON.stringify(snapshot);
     }
 
     function swapCompanies() {
-        ['value', 'snapshot', 'search'].forEach(suffix => {
-            const p = document.getElementById('provider-' + suffix);
-            const r = document.getElementById('receiver-' + suffix);
-            const tmp = p.value;
-            p.value = r.value;
-            r.value = tmp;
-        });
-        const pDet = document.getElementById('provider-details');
-        const rDet = document.getElementById('receiver-details');
-        const tmpHtml = pDet.innerHTML;
-        const tmpDisp = pDet.style.display;
-        pDet.innerHTML = rDet.innerHTML;
-        pDet.style.display = rDet.style.display;
-        rDet.innerHTML = tmpHtml;
-        rDet.style.display = tmpDisp;
+        const pSnap = document.getElementById('provider-snapshot').value;
+        const rSnap = document.getElementById('receiver-snapshot').value;
+        let pData = null;
+        let rData = null;
+        try { if(pSnap) pData = JSON.parse(pSnap); } catch(e){}
+        try { if(rSnap) rData = JSON.parse(rSnap); } catch(e){}
+        
+        updateCpDetails('provider', rData);
+        updateCpDetails('receiver', pData);
     }
 
     function clearWasteSelection() {
@@ -407,7 +396,7 @@
         if (!currentWasteData) return alert('Выберите отход');
         const amount = document.getElementById('temp-amount').value.trim().replace(',', '.');
         if (!amount || isNaN(amount)) return alert('Укажите количество');
-        
+
         const ops = [];
         document.querySelectorAll('[id^="temp-op"]:checked').forEach(cb => ops.push(cb.value));
         if (ops.length === 0) return alert('Выберите вид обращения');
@@ -460,6 +449,7 @@
         currentWasteData = null;
         document.getElementById('selected-waste-display').classList.add('d-none');
         document.getElementById('waste-search-section').style.display = 'none';
+        if (typeof handleRole === 'function') handleRole();
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -519,42 +509,53 @@
         };
 
         const tempOp8 = document.getElementById('temp-op8');
-        const actType = document.querySelector('input[name="act_type"]').value;
-        const comp = JSON.parse(document.getElementById('current-company-info').value);
-
-        function handleRole() {
-            if (actType !== 'transfer' || !tempOp8) return;
+        window.handleRole = function() {
+            const actTypeInput = document.querySelector('input[name="act_type"]');
+            if (!actTypeInput) return;
             
+            const compEl = document.getElementById('current-company-info');
+            if (!compEl) return;
+            const comp = JSON.parse(compEl.value);
+
             const getInn = (type) => {
                 const snap = document.getElementById(type + '-snapshot').value;
                 if (!snap) return '';
                 try { return JSON.parse(snap).inn || ''; } catch(e) { return ''; }
             };
 
-            const pInn = getInn('provider');
-            const rInn = getInn('receiver');
-            const cInn = comp.inn;
-            const isChecked = tempOp8.checked;
+            const cInn = String(comp.inn || '').trim();
+            const pInn = String(getInn('provider')).trim();
+            const rInn = String(getInn('receiver')).trim();
+            const tOp8 = document.getElementById('temp-op8');
+            const isChecked = tOp8 && tOp8.checked;
 
             if (isChecked) {
-                if (rInn === cInn) {
+                // Если галочка нажата: мы должны быть Поставщиком во всех видах актов
+                if (pInn !== cInn) {
                     swapCompanies();
-                } else if (pInn !== cInn) {
-                    updateCpDetails('provider', comp);
-                    if (getInn('receiver') === cInn) updateCpDetails('receiver', null);
+                    if (String(getInn('provider')).trim() !== cInn) {
+                        updateCpDetails('provider', comp);
+                        if (String(getInn('receiver')).trim() === cInn) updateCpDetails('receiver', null);
+                    }
                 }
             } else {
-                if (pInn === cInn) {
+                // Если галочка НЕ нажата: мы должны быть Получателем во всех видах актов
+                if (rInn !== cInn) {
                     swapCompanies();
-                } else if (rInn !== cInn) {
-                    updateCpDetails('receiver', comp);
-                    if (getInn('provider') === cInn) updateCpDetails('provider', null);
+                    if (String(getInn('receiver')).trim() !== cInn) {
+                        updateCpDetails('receiver', comp);
+                        if (String(getInn('provider')).trim() === cInn) updateCpDetails('provider', null);
+                    }
                 }
             }
-        }
+        };
 
-        if (tempOp8) tempOp8.onchange = handleRole;
-        if (actType === 'transfer') handleRole();
+        if (tempOp8) {
+            tempOp8.onchange = function() {
+                window.handleRole();
+            };
+        }
+        window.handleRole();
 
         const wSearch = document.getElementById('waste-search');
         const wRes = document.getElementById('waste-results');

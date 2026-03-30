@@ -51,6 +51,7 @@ class CompanyController extends Controller
             'contact_person'=> 'nullable|string|max:255',
             'phone'         => 'nullable|string|max:20',
             'email'         => 'nullable|email|max:255',
+            'license_valid_until' => 'nullable|date',
         ], $messages);
 
         $company = $user->companies()->create($validated);
@@ -85,6 +86,7 @@ class CompanyController extends Controller
             'contact_person'=> 'nullable|string|max:255',
             'phone'         => 'nullable|string|max:20',
             'email'         => 'nullable|email|max:255',
+            'license_valid_until' => 'nullable|date',
         ]);
 
         $company->update($validated);

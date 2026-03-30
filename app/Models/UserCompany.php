@@ -23,11 +23,13 @@ class UserCompany extends Model
         'is_active',
         'subscription_expires_at',
         'license_details',
+        'license_valid_until',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'subscription_expires_at' => 'datetime',
+        'license_valid_until' => 'date',
     ];
 
     public function user(): BelongsTo

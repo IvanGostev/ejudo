@@ -45,6 +45,16 @@
                         placeholder="г. Москва, ул. Пушкина, д. 1" required></textarea>
                 </div>
 
+                <div class="mb-3">
+                    <label for="license_details" class="form-label">Реквизиты лицензии (необязательно)</label>
+                    <input type="text" class="form-control" id="license_details" name="license_details" placeholder="№000 от 01.01.2026">
+                </div>
+
+                <div class="mb-3">
+                    <label for="license_valid_until" class="form-label">Срок действия лицензии (необязательно)</label>
+                    <input type="date" class="form-control" id="license_valid_until" name="license_valid_until">
+                </div>
+
                 <button type="submit" class="btn btn-success w-100">Создать и продолжить</button>
             </form>
         </div>
